@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "413942618204",
+    "project_id": "scretiny-ai",
+    "storage_bucket": "scretiny-ai.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:413942618204:android:a414a9596eb5b52576ee99",
+        "android_client_info": {
+          "package_name": "com.buxhiisd.scranity_ai"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDAR-bNrUxhzV6sNg6t7OF6fjuwBGbkubY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
