@@ -1,0 +1,172 @@
+{
+  "app_name": "SerenityAI",
+  "app_tagline": "Votre compagnon de bien-être mental",
+
+  "auth": {
+    "login": "Se connecter",
+    "register": "Créer un compte",
+    "email": "E-mail",
+    "password": "Mot de passe",
+    "name": "Nom complet",
+    "age": "Âge",
+    "forgot_password": "Mot de passe oublié ?",
+    "sign_in_google": "Continuer avec Google",
+    "no_account": "Pas de compte ?",
+    "already_account": "Déjà un compte ?",
+    "accept_terms": "J'accepte les Conditions d'utilisation et la Politique de confidentialité",
+    "sign_out": "Se déconnecter"
+  },
+
+  "onboarding": {
+    "title1": "Bienvenue sur SerenityAI",
+    "title2": "Choisissez votre langue",
+    "title3": "Préférence de foi",
+    "title4": "Définissez vos objectifs",
+    "title5": "Autoriser les permissions",
+    "desc1": "Surveillez votre santé mentale et détectez le stress sans appareils.",
+    "desc2": "SerenityAI prend en charge plusieurs langues pour une expérience personnalisée.",
+    "desc3": "Nous personnaliserons votre contenu de pleine conscience selon votre fond spirituel.",
+    "desc4": "Comment décririez-vous votre niveau de stress actuel ?",
+    "desc5": "Ces permissions sont nécessaires pour les fonctionnalités de détection du stress.",
+    "select_language": "Sélectionner la langue",
+    "select_faith": "Sélectionner la foi",
+    "set_goals": "Définir les objectifs",
+    "grant_permissions": "Accorder les permissions",
+    "get_started": "Commencer"
+  },
+
+  "home": {
+    "today_stress": "Stress d'aujourd'hui",
+    "quick_scan": "Scan rapide",
+    "morning_checkin": "Check-in matinal",
+    "evening_checkin": "Check-in du soir",
+    "daily_tip": "Conseil quotidien",
+    "current_streak": "Série actuelle",
+    "days": "jours",
+    "good_morning": "Bonjour",
+    "good_evening": "Bonsoir"
+  },
+
+  "nav": {
+    "home": "Accueil",
+    "analytics": "Analyses",
+    "mindfulness": "Pleine conscience",
+    "family": "Famille",
+    "profile": "Profil"
+  },
+
+  "stress": {
+    "score": "Score de stress",
+    "low": "Faible",
+    "medium": "Moyen",
+    "high": "Élevé",
+    "critical": "Critique",
+    "result": "Résultat de stress",
+    "triggers": "Déclencheurs de stress",
+    "camera_scan": "Scan caméra",
+    "voice_checkin": "Check-in vocal",
+    "scan_instruction": "Placez doucement votre doigt sur la caméra arrière",
+    "voice_instruction": "Parlez librement pendant 30 secondes de ce que vous ressentez",
+    "analyzing": "Analyse en cours...",
+    "scan_complete": "Scan terminé"
+  },
+
+  "checkin": {
+    "sleep_quality": "Qualité du sommeil",
+    "anxiety_level": "Niveau d'anxiété",
+    "energy_level": "Niveau d'énergie",
+    "mental_clarity": "Clarté mentale",
+    "overall_mood": "Humeur générale",
+    "work_stress": "Stress au travail",
+    "gratitude_note": "Pour quoi êtes-vous reconnaissant aujourd'hui ?",
+    "complete": "Check-in terminé"
+  },
+
+  "mindfulness": {
+    "title": "Pleine conscience",
+    "breathing": "Respiration",
+    "meditation": "Méditation",
+    "prayer": "Prière",
+    "journal": "Journal",
+    "inhale": "Inspirer",
+    "hold": "Maintenir",
+    "exhale": "Expirer",
+    "start": "Démarrer la session",
+    "end": "Terminer la session",
+    "minutes": "minutes",
+    "premium": "Contenu premium"
+  },
+
+  "analytics": {
+    "title": "Analyses",
+    "weekly": "Rapport hebdomadaire",
+    "monthly": "Rapport mensuel",
+    "best_day": "Meilleur jour",
+    "worst_day": "Pire jour",
+    "avg_stress": "Stress moyen",
+    "top_triggers": "Principaux déclencheurs",
+    "sleep_graph": "Graphique de sommeil",
+    "mood_calendar": "Calendrier d'humeur"
+  },
+
+  "family": {
+    "title": "Famille",
+    "invite": "Inviter un membre",
+    "remove": "Supprimer un membre",
+    "alert_prefs": "Préférences d'alerte",
+    "share_progress": "Partager les progrès",
+    "alert_high_stress": "Alerte stress élevé",
+    "alert_missed_checkin": "Alerte check-in manqué"
+  },
+
+  "therapist": {
+    "title": "Thérapeutes",
+    "book": "Réserver une session",
+    "slots": "Créneaux disponibles",
+    "online": "En ligne maintenant",
+    "per_session": "par session",
+    "filter": "Filtrer par"
+  },
+
+  "profile": {
+    "title": "Profil",
+    "edit": "Modifier le profil",
+    "subscription": "Abonnement",
+    "notifications": "Notifications",
+    "privacy": "Confidentialité",
+    "free": "Gratuit",
+    "basic": "Basique",
+    "premium": "Premium"
+  },
+
+  "faith": {
+    "islam": "Islam",
+    "christian": "Chrétien",
+    "hindu": "Hindouisme",
+    "buddhism": "Bouddhisme",
+    "secular": "Séculier / Aucun"
+  },
+
+  "common": {
+    "next": "Suivant",
+    "skip": "Passer",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "close": "Fermer",
+    "loading": "Chargement...",
+    "error": "Une erreur s'est produite",
+    "no_data": "Aucune donnée disponible",
+    "retry": "Réessayer",
+    "success": "Succès",
+    "submit": "Soumettre",
+    "today": "Aujourd'hui",
+    "week": "Semaine",
+    "month": "Mois",
+    "share_with_family": "Partager avec la famille",
+    "permission_denied": "Permission refusée",
+    "no_internet": "Pas de connexion internet"
+  }
+}

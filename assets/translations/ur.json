@@ -1,0 +1,172 @@
+{
+  "app_name": "سیرینیٹی AI",
+  "app_tagline": "آپ کا ذہنی صحت کا ساتھی",
+
+  "auth": {
+    "login": "سائن ان",
+    "register": "اکاؤنٹ بنائیں",
+    "email": "ای میل",
+    "password": "پاس ورڈ",
+    "name": "پورا نام",
+    "age": "عمر",
+    "forgot_password": "پاس ورڈ بھول گئے؟",
+    "sign_in_google": "Google سے جاری رکھیں",
+    "no_account": "اکاؤنٹ نہیں ہے؟",
+    "already_account": "پہلے سے اکاؤنٹ ہے؟",
+    "accept_terms": "میں شرائط خدمت اور رازداری کی پالیسی سے متفق ہوں",
+    "sign_out": "سائن آؤٹ"
+  },
+
+  "onboarding": {
+    "title1": "SerenityAI میں خوش آمدید",
+    "title2": "اپنی زبان چنیں",
+    "title3": "مذہبی ترجیح",
+    "title4": "اپنے اہداف مقرر کریں",
+    "title5": "اجازتیں دیں",
+    "desc1": "بغیر آلات کے اپنی ذہنی صحت کی نگرانی کریں اور AI مدد حاصل کریں۔",
+    "desc2": "SerenityAI ذاتی تجربے کے لیے متعدد زبانوں کی حمایت کرتا ہے۔",
+    "desc3": "ہم آپ کے روحانی پس منظر کی بنیاد پر آپ کا مراقبہ مواد ذاتی بنائیں گے۔",
+    "desc4": "آپ اپنے موجودہ تناؤ کی سطح کو کیسے بیان کریں گے؟",
+    "desc5": "یہ اجازتیں تناؤ کی تشخیص کی خصوصیات کے لیے ضروری ہیں۔",
+    "select_language": "زبان منتخب کریں",
+    "select_faith": "مذہب منتخب کریں",
+    "set_goals": "اہداف مقرر کریں",
+    "grant_permissions": "اجازتیں دیں",
+    "get_started": "شروع کریں"
+  },
+
+  "home": {
+    "today_stress": "آج کا تناؤ",
+    "quick_scan": "فوری اسکین",
+    "morning_checkin": "صبح کا چیک ان",
+    "evening_checkin": "شام کا چیک ان",
+    "daily_tip": "روزانہ کی تجویز",
+    "current_streak": "موجودہ سلسلہ",
+    "days": "دن",
+    "good_morning": "صبح بخیر",
+    "good_evening": "شام بخیر"
+  },
+
+  "nav": {
+    "home": "ہوم",
+    "analytics": "تجزیات",
+    "mindfulness": "مراقبہ",
+    "family": "خاندان",
+    "profile": "پروفائل"
+  },
+
+  "stress": {
+    "score": "تناؤ کا اسکور",
+    "low": "کم",
+    "medium": "درمیانہ",
+    "high": "زیادہ",
+    "critical": "نازک",
+    "result": "تناؤ کا نتیجہ",
+    "triggers": "تناؤ کے محرکات",
+    "camera_scan": "کیمرہ اسکین",
+    "voice_checkin": "آواز چیک ان",
+    "scan_instruction": "اپنی انگلی آہستہ سے پچھلے کیمرے پر رکھیں",
+    "voice_instruction": "30 سیکنڈ تک اپنے احساسات کے بارے میں آزادانہ بولیں",
+    "analyzing": "تجزیہ ہو رہا ہے...",
+    "scan_complete": "اسکین مکمل"
+  },
+
+  "checkin": {
+    "sleep_quality": "نیند کا معیار",
+    "anxiety_level": "پریشانی کی سطح",
+    "energy_level": "توانائی کی سطح",
+    "mental_clarity": "ذہنی وضاحت",
+    "overall_mood": "مجموعی موڈ",
+    "work_stress": "کام کا تناؤ",
+    "gratitude_note": "آج آپ کس چیز کے لیے شکرگزار ہیں؟",
+    "complete": "چیک ان مکمل"
+  },
+
+  "mindfulness": {
+    "title": "مراقبہ",
+    "breathing": "سانس لینا",
+    "meditation": "مراقبہ",
+    "prayer": "نماز / دعا",
+    "journal": "ڈائری",
+    "inhale": "سانس اندر",
+    "hold": "روکیں",
+    "exhale": "سانس باہر",
+    "start": "سیشن شروع کریں",
+    "end": "سیشن ختم کریں",
+    "minutes": "منٹ",
+    "premium": "پریمیم مواد"
+  },
+
+  "analytics": {
+    "title": "تجزیات",
+    "weekly": "ہفتہ وار رپورٹ",
+    "monthly": "ماہانہ رپورٹ",
+    "best_day": "بہترین دن",
+    "worst_day": "بدترین دن",
+    "avg_stress": "اوسط تناؤ",
+    "top_triggers": "اہم محرکات",
+    "sleep_graph": "نیند کا گراف",
+    "mood_calendar": "موڈ کیلنڈر"
+  },
+
+  "family": {
+    "title": "خاندان",
+    "invite": "رکن مدعو کریں",
+    "remove": "رکن ہٹائیں",
+    "alert_prefs": "الرٹ ترجیحات",
+    "share_progress": "پیشرفت شیئر کریں",
+    "alert_high_stress": "زیادہ تناؤ پر الرٹ",
+    "alert_missed_checkin": "چیک ان نہ ہونے پر الرٹ"
+  },
+
+  "therapist": {
+    "title": "معالج",
+    "book": "سیشن بک کریں",
+    "slots": "دستیاب وقت",
+    "online": "ابھی آن لائن",
+    "per_session": "فی سیشن",
+    "filter": "فلٹر کریں"
+  },
+
+  "profile": {
+    "title": "پروفائل",
+    "edit": "پروفائل ترمیم کریں",
+    "subscription": "سبسکرپشن",
+    "notifications": "اطلاعات",
+    "privacy": "رازداری",
+    "free": "مفت",
+    "basic": "بنیادی",
+    "premium": "پریمیم"
+  },
+
+  "faith": {
+    "islam": "اسلام",
+    "christian": "مسیحیت",
+    "hindu": "ہندو مت",
+    "buddhism": "بدھ مت",
+    "secular": "سیکولر / کوئی نہیں"
+  },
+
+  "common": {
+    "next": "اگلا",
+    "skip": "چھوڑیں",
+    "save": "محفوظ کریں",
+    "cancel": "منسوخ",
+    "confirm": "تصدیق کریں",
+    "delete": "حذف کریں",
+    "edit": "ترمیم کریں",
+    "close": "بند کریں",
+    "loading": "لوڈ ہو رہا ہے...",
+    "error": "کچھ غلط ہو گیا",
+    "no_data": "کوئی ڈیٹا نہیں",
+    "retry": "دوبارہ کوشش کریں",
+    "success": "کامیاب",
+    "submit": "جمع کریں",
+    "today": "آج",
+    "week": "ہفتہ",
+    "month": "مہینہ",
+    "share_with_family": "خاندان کے ساتھ شیئر کریں",
+    "permission_denied": "اجازت سے انکار",
+    "no_internet": "انٹرنیٹ کنکشن نہیں"
+  }
+}

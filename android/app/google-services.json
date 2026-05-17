@@ -12,7 +12,20 @@
           "package_name": "com.buxhiisd.scranity_ai"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "413942618204-ouo3rond99tpqi1gju1nbuu6vbv294tb.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.buxhiisd.scranity_ai",
+            "certificate_hash": "0586dcdba2e2c55d08a5da791ef94ca04285abe5"
+          }
+        },
+        {
+          "client_id": "413942618204-0dkv6as72qa2an2kft7htdnu1p9ojjio.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDAR-bNrUxhzV6sNg6t7OF6fjuwBGbkubY"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "413942618204-0dkv6as72qa2an2kft7htdnu1p9ojjio.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "413942618204-ifj96te0rhoi7o399kk1lut0edqfbq2l.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.buxhiisd.scranityAi"
+              }
+            }
+          ]
         }
       }
     }

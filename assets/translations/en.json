@@ -1,0 +1,172 @@
+{
+  "app_name": "SerenityAI",
+  "app_tagline": "Your mental wellness companion",
+
+  "auth": {
+    "login": "Sign In",
+    "register": "Create Account",
+    "email": "Email",
+    "password": "Password",
+    "name": "Full Name",
+    "age": "Age",
+    "forgot_password": "Forgot password?",
+    "sign_in_google": "Continue with Google",
+    "no_account": "Don't have an account?",
+    "already_account": "Already have an account?",
+    "accept_terms": "I agree to the Terms of Service and Privacy Policy",
+    "sign_out": "Sign Out"
+  },
+
+  "onboarding": {
+    "title1": "Welcome to SerenityAI",
+    "title2": "Choose Your Language",
+    "title3": "Faith Preference",
+    "title4": "Set Your Goals",
+    "title5": "Allow Permissions",
+    "desc1": "Monitor your mental health, detect stress without wearables, and get AI-powered support.",
+    "desc2": "SerenityAI supports multiple languages for a personalized experience.",
+    "desc3": "We'll personalize your mindfulness content based on your spiritual background.",
+    "desc4": "How would you describe your current stress level?",
+    "desc5": "These permissions are required for stress detection features.",
+    "select_language": "Select Language",
+    "select_faith": "Select Faith",
+    "set_goals": "Set Goals",
+    "grant_permissions": "Grant Permissions",
+    "get_started": "Get Started"
+  },
+
+  "home": {
+    "today_stress": "Today's Stress",
+    "quick_scan": "Quick Scan",
+    "morning_checkin": "Morning Check-In",
+    "evening_checkin": "Evening Check-In",
+    "daily_tip": "Daily Wellness Tip",
+    "current_streak": "Current Streak",
+    "days": "days",
+    "good_morning": "Good morning",
+    "good_evening": "Good evening"
+  },
+
+  "nav": {
+    "home": "Home",
+    "analytics": "Analytics",
+    "mindfulness": "Mindful",
+    "family": "Family",
+    "profile": "Profile"
+  },
+
+  "stress": {
+    "score": "Stress Score",
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "critical": "Critical",
+    "result": "Stress Result",
+    "triggers": "Stress Triggers",
+    "camera_scan": "Camera Scan",
+    "voice_checkin": "Voice Check-In",
+    "scan_instruction": "Place your finger gently on the rear camera",
+    "voice_instruction": "Speak freely for 30 seconds about how you feel",
+    "analyzing": "Analyzing...",
+    "scan_complete": "Scan Complete"
+  },
+
+  "checkin": {
+    "sleep_quality": "Sleep Quality",
+    "anxiety_level": "Anxiety Level",
+    "energy_level": "Energy Level",
+    "mental_clarity": "Mental Clarity",
+    "overall_mood": "Overall Mood",
+    "work_stress": "Work Stress",
+    "gratitude_note": "What are you grateful for today?",
+    "complete": "Check-In Complete"
+  },
+
+  "mindfulness": {
+    "title": "Mindfulness",
+    "breathing": "Breathing",
+    "meditation": "Meditation",
+    "prayer": "Prayer",
+    "journal": "Journal",
+    "inhale": "Inhale",
+    "hold": "Hold",
+    "exhale": "Exhale",
+    "start": "Start Session",
+    "end": "End Session",
+    "minutes": "minutes",
+    "premium": "Premium Content"
+  },
+
+  "analytics": {
+    "title": "Analytics",
+    "weekly": "Weekly Report",
+    "monthly": "Monthly Report",
+    "best_day": "Best Day",
+    "worst_day": "Worst Day",
+    "avg_stress": "Avg Stress",
+    "top_triggers": "Top Triggers",
+    "sleep_graph": "Sleep Graph",
+    "mood_calendar": "Mood Calendar"
+  },
+
+  "family": {
+    "title": "Family",
+    "invite": "Invite Member",
+    "remove": "Remove Member",
+    "alert_prefs": "Alert Preferences",
+    "share_progress": "Share Progress",
+    "alert_high_stress": "Alert on High Stress",
+    "alert_missed_checkin": "Alert on Missed Check-In"
+  },
+
+  "therapist": {
+    "title": "Therapists",
+    "book": "Book Session",
+    "slots": "Available Slots",
+    "online": "Online Now",
+    "per_session": "per session",
+    "filter": "Filter By"
+  },
+
+  "profile": {
+    "title": "Profile",
+    "edit": "Edit Profile",
+    "subscription": "Subscription",
+    "notifications": "Notifications",
+    "privacy": "Privacy",
+    "free": "Free",
+    "basic": "Basic",
+    "premium": "Premium"
+  },
+
+  "faith": {
+    "islam": "Islam",
+    "christian": "Christian",
+    "hindu": "Hindu",
+    "buddhism": "Buddhism",
+    "secular": "Secular / None"
+  },
+
+  "common": {
+    "next": "Next",
+    "skip": "Skip",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "no_data": "No data available",
+    "retry": "Try Again",
+    "success": "Success",
+    "submit": "Submit",
+    "today": "Today",
+    "week": "Week",
+    "month": "Month",
+    "share_with_family": "Share with Family",
+    "permission_denied": "Permission denied",
+    "no_internet": "No internet connection"
+  }
+}
