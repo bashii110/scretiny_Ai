@@ -56,7 +56,7 @@ Future<void> main() async {
           Locale('es'),
           Locale('fr'),
         ],
-        path: 'translations',
+        path: 'assets/translations',
         fallbackLocale: const Locale('en'),
         child: const SerenityApp(),
       ),

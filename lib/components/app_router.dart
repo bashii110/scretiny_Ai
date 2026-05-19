@@ -6,6 +6,7 @@ import 'package:serenity_ai/provider/auth_provider.dart';
 import 'package:serenity_ai/screens/splash_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/login_screen.dart';
+import '../screens/monitering_checkin_screen.dart';
 import '../screens/on_boarding_screen.dart';
 import '../screens/register_screen.dart';
 
@@ -78,6 +79,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.home,
         builder: (context, state) => const HomeScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.morningCheckin,
+        builder: (context, state) => const MorningCheckinScreen(),
       ),
       // Add remaining routes as screens are built
     ],

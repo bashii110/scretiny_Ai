@@ -88,7 +88,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   alignment: Alignment.topRight,
                   child: TextButton(
                     onPressed: _finishOnboarding,
-                    child: Text(
+                    child: const Text(
                       'Skip',
                       style: TextStyle(color: AppColors.textLight),
                     ),
@@ -320,9 +320,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   onChanged: (v) => setState(() => _stressGoal = v.toInt()),
                 ),
                 const SizedBox(height: 8),
-                Row(
+                const Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
+                  children:  [
                     Text('Calm', style: TextStyle(color: AppColors.textLight, fontSize: 12)),
                     Text('Very stressed', style: TextStyle(color: AppColors.textLight, fontSize: 12)),
                   ],
@@ -358,7 +358,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   Widget _buildPermissionsSlide() {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -366,36 +366,46 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           const SizedBox(height: 24),
           const Text('🔐', style: TextStyle(fontSize: 60)),
           const SizedBox(height: 20),
-          Text('Allow Permissions', style: Theme.of(context).textTheme.headlineLarge),
+          Text(
+            'Allow Permissions',
+            style: Theme.of(context).textTheme.headlineLarge,
+          ),
           const SizedBox(height: 8),
           Text(
             'These permissions are required for stress detection features.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textLight),
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(color: AppColors.textLight),
           ),
           const SizedBox(height: 32),
-          _PermissionTile(
+          const _PermissionTile(
             icon: Icons.camera_alt_outlined,
             title: 'Camera',
-            desc: 'For HRV-based stress detection by measuring pulse via camera.',
+            desc:
+            'For HRV-based stress detection by measuring pulse via camera.',
           ),
           const SizedBox(height: 16),
-          _PermissionTile(
+          const _PermissionTile(
             icon: Icons.mic_outlined,
             title: 'Microphone',
             desc: 'For voice-based stress analysis during check-ins.',
           ),
           const SizedBox(height: 16),
-          _PermissionTile(
+          const _PermissionTile(
             icon: Icons.phone_android_outlined,
             title: 'Usage Access',
             desc: 'To monitor screen time as a stress indicator.',
           ),
-          const Spacer(),
-          OutlinedButton(
-            onPressed: _requestPermissions,
-            child: const Text('Grant Permissions Now'),
+          const SizedBox(height: 32),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: _requestPermissions,
+              child: const Text('Grant Permissions Now'),
+            ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Center(
             child: Text(
               'You can also grant these later in settings.',
@@ -404,6 +414,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               ),
             ),
           ),
+          const SizedBox(height: 16),
         ],
       ),
     );
@@ -415,36 +426,38 @@ class _SlideOne extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 24),
-          const Text('🌸', style: TextStyle(fontSize: 60)),
-          const SizedBox(height: 20),
-          Text(
-            'Welcome to\nSerenityAI',
-            style: Theme.of(context).textTheme.displayMedium?.copyWith(
-              color: AppColors.textDark,
-              height: 1.2,
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 24),
+            const Text('🌸', style: TextStyle(fontSize: 60)),
+            const SizedBox(height: 20),
+            Text(
+              'Welcome to\nSerenityAI',
+              style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                color: AppColors.textDark,
+                height: 1.2,
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Monitor your mental health, detect stress without wearables, and get AI-powered support — all in one place.',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: AppColors.textMedium,
-              height: 1.6,
+            const SizedBox(height: 16),
+            Text(
+              'Monitor your mental health, detect stress without wearables, and get AI-powered support — all in one place.',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: AppColors.textMedium,
+                height: 1.6,
+              ),
             ),
-          ),
-          const SizedBox(height: 40),
-          ...[
-            _FeatureBullet(icon: '📷', text: 'Camera-based HRV stress detection'),
-            _FeatureBullet(icon: '🎙️', text: 'Voice analysis for emotional wellbeing'),
-            _FeatureBullet(icon: '🧘', text: 'Faith-sensitive mindfulness content'),
-            _FeatureBullet(icon: '👨‍👩‍👧', text: 'Family support mode'),
-            _FeatureBullet(icon: '🌍', text: 'Global therapist connection'),
+            const SizedBox(height: 40),
+            ... const[
+              _FeatureBullet(icon: '📷', text: 'Camera-based HRV stress detection'),
+              _FeatureBullet(icon: '🎙️', text: 'Voice analysis for emotional wellbeing'),
+              _FeatureBullet(icon: '🧘', text: 'Faith-sensitive mindfulness content'),
+              _FeatureBullet(icon: '👨‍👩‍👧', text: 'Family support mode'),
+              _FeatureBullet(icon: '🌍', text: 'Global therapist connection'),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

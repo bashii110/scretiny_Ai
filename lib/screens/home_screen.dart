@@ -8,6 +8,7 @@ import '../components/app_router.dart';
 import '../domain_model/auth_model.dart';
 import '../domain_model/stress_model.dart';
 import '../provider/auth_provider.dart';
+import '../provider/home_provider.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -183,8 +184,8 @@ class _HomeTab extends ConsumerWidget {
                 // ── Stress Gauge Card ──────────────────────────────────────
                 todayStressAsync.when(
                   data: (log) => _StressGaugeCard(log: log),
-                  loading: () => _StressGaugeCard(log: null),
-                  error: (e, _) => _StressGaugeCard(log: null),
+                  loading: () => const _StressGaugeCard(log: null),
+                  error: (e, _) => const _StressGaugeCard(log: null),
                 ),
                 const SizedBox(height: 20),
 
@@ -199,8 +200,8 @@ class _HomeTab extends ConsumerWidget {
                 // ── Streak + Stats row ─────────────────────────────────────
                 streakAsync.when(
                   data: (streak) => _StatsRow(streak: streak),
-                  loading: () => _StatsRow(streak: 0),
-                  error: (_, __) => _StatsRow(streak: 0),
+                  loading: () => const _StatsRow(streak: 0),
+                  error: (_, __) => const _StatsRow(streak: 0),
                 ),
                 const SizedBox(height: 20),
 
@@ -335,16 +336,16 @@ class _StressGaugeCard extends StatelessWidget {
           ] else ...[
             const SizedBox(height: 20),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
               decoration: BoxDecoration(
                 color: AppColors.primary.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Row(
+              child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.touch_app_outlined, size: 16, color: AppColors.primary),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Text(
                     'Tap Quick Scan to measure stress',
                     style: TextStyle(
@@ -790,6 +791,8 @@ class _StatsRow extends ConsumerWidget {
     final weeklyAvg = ref.watch(weeklyAverageProvider);
 
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Expanded(
           child: _StatCard(
@@ -810,14 +813,14 @@ class _StatsRow extends ConsumerWidget {
               value: avg.toStringAsFixed(0),
               suffix: '/ 100',
             ),
-            loading: () => _StatCard(
+            loading: () => const _StatCard(
               icon: Icons.trending_up_rounded,
               iconColor: AppColors.secondary,
               label: 'Weekly Avg',
               value: '--',
               suffix: '/ 100',
             ),
-            error: (_, __) => _StatCard(
+            error: (_, __) => const _StatCard(
               icon: Icons.trending_up_rounded,
               iconColor: AppColors.secondary,
               label: 'Weekly Avg',
@@ -849,13 +852,15 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      constraints: const BoxConstraints(minHeight: 76), // ← fix #1
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center, // ← fix #2
         children: [
           Container(
             width: 44,
@@ -869,33 +874,32 @@ class _StatCard extends StatelessWidget {
           const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 label,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: AppColors.textLight,
-                ),
+                style: const TextStyle(fontSize: 11, color: AppColors.textLight),
               ),
               const SizedBox(height: 2),
-              RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(
-                      text: value,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        height: 1,
-                      ),
+              Row(                                        // ← fix #3
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    value,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      height: 1,
                     ),
-                    TextSpan(
-                      text: ' $suffix',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textLight,
-                      ),
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    suffix,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textLight,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ],
           ),

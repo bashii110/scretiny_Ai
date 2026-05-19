@@ -1,9 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:logger/logger.dart';
-import 'package:uuid/uuid.dart';
-
 import 'domain_model/auth_model.dart';
 
 
@@ -148,7 +146,7 @@ class AuthRepository {
       );
 
       final userCredential = await _auth.signInWithCredential(credential);
-      final user = userCredential.userCredential?.user ?? userCredential.user;
+      final user = userCredential.user;
 
       if (user == null) throw const AuthException(message: 'Google sign-in failed', code: 'null-user');
 
