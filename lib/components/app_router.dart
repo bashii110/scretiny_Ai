@@ -1,12 +1,14 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:serenity_ai/provider/auth_provider.dart';
 import 'package:serenity_ai/screens/splash_screen.dart';
+import 'package:serenity_ai/screens/stressresult_screen.dart';
+import 'package:serenity_ai/screens/voicecheckin_screen.dart';
+import '../screens/camerascan_screen.dart';
+import '../screens/evening_checkin_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/login_screen.dart';
-import '../screens/monitering_checkin_screen.dart';
+import '../screens/morning_checkin_screen.dart';
 import '../screens/on_boarding_screen.dart';
 import '../screens/register_screen.dart';
 
@@ -83,6 +85,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.morningCheckin,
         builder: (context, state) => const MorningCheckinScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.eveningCheckin,
+        builder: (context, state) => const EveningCheckinScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.cameraScan,
+        builder: (context, state) => const CameraScanScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.voiceCheckin,
+        builder: (context, state) => const VoiceCheckinScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.voiceCheckin,
+        builder: (context, state) => const StressResultScreen(),
       ),
       // Add remaining routes as screens are built
     ],

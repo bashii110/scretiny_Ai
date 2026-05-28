@@ -10,152 +10,265 @@ import '../stress_calculator.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 // checkin_provider.dart
 //
-// Riverpod providers and state for the morning / evening check-in flow.
+// All Riverpod providers for the morning / evening check-in feature.
 //
-// Providers:
-//   • checkinControllerProvider  – StateNotifier that drives the multi-step form
-//   • todayMorningCheckinProvider – StreamProvider<CheckInModel?> – today's morning log
-//   • todayEveningCheckinProvider – StreamProvider<CheckInModel?> – today's evening log
-//   • checkinRepositoryProvider   – thin Firestore repo (save / fetch)
+// Responsibility boundary:
+//   This file owns everything that touches the 'checkins' Firestore collection
+//   and the derived partial StressLogModel that results from a check-in.
+//   It does NOT own camera or voice stress — those providers merge into the
+//   same stress_logs document independently.
+//
+// Public surface:
+//   Repositories
+//     checkinRepositoryProvider   – CheckInRepository singleton
+//
+//   Read-only streams
+//     todayMorningCheckinProvider – StreamProvider<CheckInModel?>
+//     todayEveningCheckinProvider – StreamProvider<CheckInModel?>
+//     checkinHistoryProvider      – StreamProvider.family<List<CheckInModel>, int>
+//
+//   Form controller
+//     checkinControllerProvider   – StateNotifierProvider<CheckInController>
+//
+// Firestore collections used:
+//   checkins     – one document per check-in (type: morning | evening)
+//   stress_logs  – one document per day; check-in merges into today's log
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 String? _uid() => FirebaseAuth.instance.currentUser?.uid;
 FirebaseFirestore get _db => FirebaseFirestore.instance;
 const _uuid = Uuid();
 
+/// Returns a DateTime representing midnight at the start of today (local).
+DateTime get _startOfToday {
+  final n = DateTime.now();
+  return DateTime(n.year, n.month, n.day);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
-// Repository
+// CheckInRepository
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Thin data-access layer for check-in documents and the stress-log merge.
+///
+/// All Firestore reads / writes for check-ins go through this class so that
+/// controllers stay free of raw query strings and the logic is unit-testable
+/// by injecting a mock.
 class CheckInRepository {
-  final _col = _db.collection('checkins');
-  final _stressCol = _db.collection('stress_logs');
+  final _checkinsCol = _db.collection('checkins');
+  final _stressCol   = _db.collection('stress_logs');
 
-  /// Saves a completed check-in and derives + saves the stress contribution.
-  Future<void> saveCheckIn(CheckInModel model) async {
-    await _col.doc(model.id).set(model.toMap());
+  // ── Writes ──────────────────────────────────────────────────────────────
+
+  /// Persists a completed [CheckInModel] document.
+  Future<void> saveCheckIn(CheckInModel model) =>
+      _checkinsCol.doc(model.id).set(model.toMap());
+
+  /// Creates or updates today's stress log with the check-in contribution.
+  ///
+  /// Merge strategy:
+  ///   • If a stress log already exists for today (created by camera / voice),
+  ///     only `checkInScore`, `finalStressScore`, and `stressLevel` are
+  ///     updated — camera and voice scores are preserved.
+  ///   • If no log exists yet, a new one is created with only the check-in
+  ///     fields populated (camera / voice default to 0.0 until those scans
+  ///     are run).
+  Future<void> upsertStressLogFromCheckIn({
+    required String uid,
+    required double checkInScore,
+    required double sleepScore,
+    required DateTime date,
+  }) async {
+    final snap = await _stressCol
+        .where('userId', isEqualTo: uid)
+        .where('date',
+        isGreaterThanOrEqualTo: _startOfToday.millisecondsSinceEpoch)
+        .orderBy('date', descending: true)
+        .limit(1)
+        .get();
+
+    if (snap.docs.isNotEmpty) {
+      // ── Merge into existing log ──────────────────────────────────────
+      final existing = StressLogModel.fromMap(snap.docs.first.data());
+      final newFinal = StressCalculator.calculateFinalStressScore(
+        cameraHRV:    existing.cameraHRVScore,
+        voiceScore:   existing.voiceScore,
+        phoneUsage:   existing.phoneUsageScore,
+        sleepScore:   sleepScore,
+        checkInScore: checkInScore,
+      );
+      await _stressCol.doc(existing.id).update({
+        'checkInScore':    checkInScore,
+        'finalStressScore': newFinal,
+        'stressLevel':     StressCalculator.getStressLevel(newFinal),
+      });
+    } else {
+      // ── Create new partial log ───────────────────────────────────────
+      final finalScore = StressCalculator.calculateFinalStressScore(
+        cameraHRV:    0,
+        voiceScore:   0,
+        phoneUsage:   0,
+        sleepScore:   sleepScore,
+        checkInScore: checkInScore,
+      );
+      final log = StressLogModel(
+        id:               _uuid.v4(),
+        userId:           uid,
+        date:             date,
+        checkInScore:     checkInScore,
+        finalStressScore: finalScore,
+        stressLevel:      StressCalculator.getStressLevel(finalScore),
+      );
+      await _stressCol.doc(log.id).set(log.toMap());
+    }
   }
 
-  /// Saves a stress log built from the check-in contribution.
-  Future<void> saveStressLog(StressLogModel log) async {
-    await _stressCol.doc(log.id).set(log.toMap());
-  }
+  // ── Reads ────────────────────────────────────────────────────────────────
 
-  /// Returns today's check-in of [type] ('morning' | 'evening') or null.
+  /// Real-time stream of today's [type] check-in ('morning' | 'evening').
   Stream<CheckInModel?> todayCheckin(String type) {
     final uid = _uid();
     if (uid == null) return Stream.value(null);
 
-    final startOfDay = DateTime(
-      DateTime.now().year,
-      DateTime.now().month,
-      DateTime.now().day,
-    );
-
-    return _col
+    return _checkinsCol
         .where('userId', isEqualTo: uid)
         .where('type', isEqualTo: type)
         .where('date',
-        isGreaterThanOrEqualTo: startOfDay.millisecondsSinceEpoch)
+        isGreaterThanOrEqualTo: _startOfToday.millisecondsSinceEpoch)
         .orderBy('date', descending: true)
         .limit(1)
         .snapshots()
-        .map((snap) => snap.docs.isEmpty
+        .map((s) => s.docs.isEmpty
         ? null
-        : CheckInModel.fromMap(snap.docs.first.data()));
+        : CheckInModel.fromMap(s.docs.first.data()));
+  }
+
+  /// Last [days] check-ins of any type for the current user, newest first.
+  Stream<List<CheckInModel>> history(int days) {
+    final uid = _uid();
+    if (uid == null) return Stream.value([]);
+
+    final cutoff =
+    DateTime.now().subtract(Duration(days: days));
+
+    return _checkinsCol
+        .where('userId', isEqualTo: uid)
+        .where('date',
+        isGreaterThanOrEqualTo: cutoff.millisecondsSinceEpoch)
+        .orderBy('date', descending: true)
+        .snapshots()
+        .map((s) => s.docs
+        .map((d) => CheckInModel.fromMap(d.data()))
+        .toList());
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Repository provider
+// ─────────────────────────────────────────────────────────────────────────────
 
 final checkinRepositoryProvider = Provider<CheckInRepository>(
       (_) => CheckInRepository(),
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Today's check-in streams
+// Read-only stream providers
 // ─────────────────────────────────────────────────────────────────────────────
 
-final todayMorningCheckinProvider = StreamProvider<CheckInModel?>((ref) {
-  return ref.watch(checkinRepositoryProvider).todayCheckin('morning');
-});
+/// Today's morning check-in, or null if not yet completed.
+final todayMorningCheckinProvider = StreamProvider<CheckInModel?>((ref) =>
+    ref.watch(checkinRepositoryProvider).todayCheckin('morning'));
 
-final todayEveningCheckinProvider = StreamProvider<CheckInModel?>((ref) {
-  return ref.watch(checkinRepositoryProvider).todayCheckin('evening');
-});
+/// Today's evening check-in, or null if not yet completed.
+final todayEveningCheckinProvider = StreamProvider<CheckInModel?>((ref) =>
+    ref.watch(checkinRepositoryProvider).todayCheckin('evening'));
+
+/// Last [days] check-ins (any type). Family provider — pass the window size:
+/// ```dart
+/// ref.watch(checkinHistoryProvider(7));   // last week
+/// ref.watch(checkinHistoryProvider(30));  // last month
+/// ```
+final checkinHistoryProvider =
+StreamProvider.family<List<CheckInModel>, int>((ref, days) =>
+    ref.watch(checkinRepositoryProvider).history(days));
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Check-in form state
+// CheckInFormState
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Immutable value object holding all form field values and UI state for
+/// both the morning (5-step) and evening (4-step) flows.
 class CheckInFormState {
-  // Step tracking
-  final int currentStep;   // 0-based, max depends on type
-  final bool isSubmitting;
-  final bool isComplete;
+  final int    currentStep;
+  final bool   isSubmitting;
+  final bool   isComplete;
   final String? error;
 
-  // Morning fields
-  final int sleepQuality;   // 1–5
-  final int energyLevel;    // 1–5
-  final int anxietyLevel;   // 1–5
-  final int mentalClarity;  // 1–5
-  final int overallMood;    // 1–5
-  final int workStress;     // 1–5
+  // ── Slider fields (1–5) ──────────────────────────────────────────────────
+  final int sleepQuality;   // morning only
+  final int energyLevel;
+  final int anxietyLevel;
+  final int mentalClarity;
+  final int overallMood;
+  final int workStress;
   final String gratitudeNote;
 
   const CheckInFormState({
-    this.currentStep = 0,
+    this.currentStep  = 0,
     this.isSubmitting = false,
-    this.isComplete = false,
+    this.isComplete   = false,
     this.error,
-    this.sleepQuality = 3,
-    this.energyLevel = 3,
-    this.anxietyLevel = 3,
+    this.sleepQuality  = 3,
+    this.energyLevel   = 3,
+    this.anxietyLevel  = 3,
     this.mentalClarity = 3,
-    this.overallMood = 3,
-    this.workStress = 3,
+    this.overallMood   = 3,
+    this.workStress    = 3,
     this.gratitudeNote = '',
   });
 
   CheckInFormState copyWith({
-    int? currentStep,
-    bool? isSubmitting,
-    bool? isComplete,
+    int?    currentStep,
+    bool?   isSubmitting,
+    bool?   isComplete,
     String? error,
-    int? sleepQuality,
-    int? energyLevel,
-    int? anxietyLevel,
-    int? mentalClarity,
-    int? overallMood,
-    int? workStress,
+    int?    sleepQuality,
+    int?    energyLevel,
+    int?    anxietyLevel,
+    int?    mentalClarity,
+    int?    overallMood,
+    int?    workStress,
     String? gratitudeNote,
   }) =>
       CheckInFormState(
-        currentStep: currentStep ?? this.currentStep,
-        isSubmitting: isSubmitting ?? this.isSubmitting,
-        isComplete: isComplete ?? this.isComplete,
-        error: error,
-        sleepQuality: sleepQuality ?? this.sleepQuality,
-        energyLevel: energyLevel ?? this.energyLevel,
-        anxietyLevel: anxietyLevel ?? this.anxietyLevel,
+        currentStep:   currentStep   ?? this.currentStep,
+        isSubmitting:  isSubmitting  ?? this.isSubmitting,
+        isComplete:    isComplete    ?? this.isComplete,
+        error:         error,                             // null resets error
+        sleepQuality:  sleepQuality  ?? this.sleepQuality,
+        energyLevel:   energyLevel   ?? this.energyLevel,
+        anxietyLevel:  anxietyLevel  ?? this.anxietyLevel,
         mentalClarity: mentalClarity ?? this.mentalClarity,
-        overallMood: overallMood ?? this.overallMood,
-        workStress: workStress ?? this.workStress,
+        overallMood:   overallMood   ?? this.overallMood,
+        workStress:    workStress    ?? this.workStress,
         gratitudeNote: gratitudeNote ?? this.gratitudeNote,
       );
 
-  /// Progress value 0.0–1.0 for the morning flow (5 steps).
   double get morningProgress => (currentStep + 1) / 5;
-
-  /// Progress value 0.0–1.0 for the evening flow (4 steps).
   double get eveningProgress => (currentStep + 1) / 4;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Controller
+// CheckInController
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Drives both the morning and evening check-in flows.
+///
+/// Step navigation, field mutations, and Firestore submission all go through
+/// here. The UI reads [CheckInFormState] and calls the notifier methods —
+/// no business logic leaks into widgets.
 class CheckInController extends StateNotifier<CheckInFormState> {
   final CheckInRepository _repo;
 
@@ -163,19 +276,19 @@ class CheckInController extends StateNotifier<CheckInFormState> {
 
   // ── Field setters ─────────────────────────────────────────────────────────
 
-  void setSleepQuality(int v) => state = state.copyWith(sleepQuality: v);
-  void setEnergyLevel(int v) => state = state.copyWith(energyLevel: v);
-  void setAnxietyLevel(int v) => state = state.copyWith(anxietyLevel: v);
-  void setMentalClarity(int v) => state = state.copyWith(mentalClarity: v);
-  void setOverallMood(int v) => state = state.copyWith(overallMood: v);
-  void setWorkStress(int v) => state = state.copyWith(workStress: v);
-  void setGratitudeNote(String v) => state = state.copyWith(gratitudeNote: v);
+  void setSleepQuality(int v)   => state = state.copyWith(sleepQuality:  v);
+  void setEnergyLevel(int v)    => state = state.copyWith(energyLevel:   v);
+  void setAnxietyLevel(int v)   => state = state.copyWith(anxietyLevel:  v);
+  void setMentalClarity(int v)  => state = state.copyWith(mentalClarity: v);
+  void setOverallMood(int v)    => state = state.copyWith(overallMood:   v);
+  void setWorkStress(int v)     => state = state.copyWith(workStress:    v);
+  void setGratitudeNote(String v) =>
+      state = state.copyWith(gratitudeNote: v);
 
-  // ── Navigation ────────────────────────────────────────────────────────────
+  // ── Step navigation ───────────────────────────────────────────────────────
 
-  void nextStep() {
-    state = state.copyWith(currentStep: state.currentStep + 1);
-  }
+  void nextStep() =>
+      state = state.copyWith(currentStep: state.currentStep + 1);
 
   void prevStep() {
     if (state.currentStep > 0) {
@@ -184,132 +297,115 @@ class CheckInController extends StateNotifier<CheckInFormState> {
   }
 
   void reset() => state = const CheckInFormState();
+  void clearError() => state = state.copyWith(error: null);
 
-  // ── Submit morning check-in ───────────────────────────────────────────────
+  // ── Submit morning ────────────────────────────────────────────────────────
 
+  /// Saves the morning [CheckInModel] and upserts today's stress log.
+  /// Returns `true` on success so the screen can navigate away.
   Future<bool> submitMorning() async {
     final uid = _uid();
     if (uid == null) return false;
 
-    state = state.copyWith(isSubmitting: true, error: null);
-
+    state = state.copyWith(isSubmitting: true);
     try {
       final now = DateTime.now();
-      final s = state;
+      final s   = state;
 
+      // 1 — Persist check-in document
       final model = CheckInModel(
-        id: _uuid.v4(),
-        userId: uid,
-        type: 'morning',
-        date: now,
-        sleepQuality: s.sleepQuality,
-        anxietyLevel: s.anxietyLevel,
-        energyLevel: s.energyLevel,
+        id:            _uuid.v4(),
+        userId:        uid,
+        type:          'morning',
+        date:          now,
+        sleepQuality:  s.sleepQuality,
+        anxietyLevel:  s.anxietyLevel,
+        energyLevel:   s.energyLevel,
         mentalClarity: s.mentalClarity,
-        overallMood: s.overallMood,
-        workStress: s.workStress,
+        overallMood:   s.overallMood,
+        workStress:    s.workStress,
         gratitudeNote: s.gratitudeNote,
       );
-
       await _repo.saveCheckIn(model);
 
-      // Derive partial stress log from check-in only
+      // 2 — Derive stress contributions
       final checkInScore = StressCalculator.checkInToStress(
-        anxietyLevel: s.anxietyLevel,
-        workStress: s.workStress,
-        energyLevel: s.energyLevel,
+        anxietyLevel:  s.anxietyLevel,
+        workStress:    s.workStress,
+        energyLevel:   s.energyLevel,
         mentalClarity: s.mentalClarity,
       );
-      final sleepScore = StressCalculator.sleepQualityToStress(s.sleepQuality);
+      final sleepScore =
+      StressCalculator.sleepQualityToStress(s.sleepQuality);
 
-      // Partial final score (camera + voice = 0 until scanned today)
-      final finalScore = StressCalculator.calculateFinalStressScore(
-        cameraHRV: 0,
-        voiceScore: 0,
-        phoneUsage: 0,
-        sleepScore: sleepScore,
+      // 3 — Upsert stress log (merge with camera/voice if already exists)
+      await _repo.upsertStressLogFromCheckIn(
+        uid:          uid,
         checkInScore: checkInScore,
+        sleepScore:   sleepScore,
+        date:         now,
       );
-
-      final stressLog = StressLogModel(
-        id: _uuid.v4(),
-        userId: uid,
-        date: now,
-        checkInScore: checkInScore,
-        finalStressScore: finalScore,
-        stressLevel: StressCalculator.getStressLevel(finalScore),
-      );
-
-      await _repo.saveStressLog(stressLog);
 
       state = state.copyWith(isSubmitting: false, isComplete: true);
       return true;
-    } catch (e) {
+    } catch (e, st) {
+      print('SUBMIT MORNING ERROR: $e');
+      print(st);
+
       state = state.copyWith(
         isSubmitting: false,
-        error: 'Could not save check-in. Please try again.',
+        error: e.toString(),
       );
+
       return false;
     }
   }
 
-  // ── Submit evening check-in ───────────────────────────────────────────────
+  // ── Submit evening ────────────────────────────────────────────────────────
 
+  /// Saves the evening [CheckInModel] and upserts today's stress log.
+  /// Sleep score is 0 for evening (no sleep data collected at night).
   Future<bool> submitEvening() async {
     final uid = _uid();
     if (uid == null) return false;
 
-    state = state.copyWith(isSubmitting: true, error: null);
-
+    state = state.copyWith(isSubmitting: true);
     try {
       final now = DateTime.now();
-      final s = state;
+      final s   = state;
 
       final model = CheckInModel(
-        id: _uuid.v4(),
-        userId: uid,
-        type: 'evening',
-        date: now,
-        sleepQuality: s.sleepQuality,
-        anxietyLevel: s.anxietyLevel,
-        energyLevel: s.energyLevel,
+        id:            _uuid.v4(),
+        userId:        uid,
+        type:          'evening',
+        date:          now,
+        sleepQuality:  s.sleepQuality,
+        anxietyLevel:  s.anxietyLevel,
+        energyLevel:   s.energyLevel,
         mentalClarity: s.mentalClarity,
-        overallMood: s.overallMood,
-        workStress: s.workStress,
+        overallMood:   s.overallMood,
+        workStress:    s.workStress,
         gratitudeNote: s.gratitudeNote,
       );
-
       await _repo.saveCheckIn(model);
 
       final checkInScore = StressCalculator.checkInToStress(
-        anxietyLevel: s.anxietyLevel,
-        workStress: s.workStress,
-        energyLevel: s.energyLevel,
+        anxietyLevel:  s.anxietyLevel,
+        workStress:    s.workStress,
+        energyLevel:   s.energyLevel,
         mentalClarity: s.mentalClarity,
       );
 
-      final finalScore = StressCalculator.calculateFinalStressScore(
-        cameraHRV: 0,
-        voiceScore: 0,
-        phoneUsage: 0,
-        sleepScore: 0,
+      await _repo.upsertStressLogFromCheckIn(
+        uid:          uid,
         checkInScore: checkInScore,
+        sleepScore:   0, // evening has no sleep signal
+        date:         now,
       );
-
-      final stressLog = StressLogModel(
-        id: _uuid.v4(),
-        userId: uid,
-        date: now,
-        checkInScore: checkInScore,
-        finalStressScore: finalScore,
-        stressLevel: StressCalculator.getStressLevel(finalScore),
-      );
-
-      await _repo.saveStressLog(stressLog);
 
       state = state.copyWith(isSubmitting: false, isComplete: true);
       return true;
-    } catch (e) {
+    } catch (_) {
       state = state.copyWith(
         isSubmitting: false,
         error: 'Could not save check-in. Please try again.',
@@ -317,10 +413,14 @@ class CheckInController extends StateNotifier<CheckInFormState> {
       return false;
     }
   }
-
-  void clearError() => state = state.copyWith(error: null);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Controller provider
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// autoDispose ensures form state is wiped when the user leaves a check-in
+/// screen so reopening always starts from step 0 with default values.
 final checkinControllerProvider =
 StateNotifierProvider.autoDispose<CheckInController, CheckInFormState>(
       (ref) => CheckInController(ref.watch(checkinRepositoryProvider)),
