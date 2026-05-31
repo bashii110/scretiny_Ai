@@ -3,12 +3,17 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:serenity_ai/screens/analytics_screen.dart';
+import 'package:serenity_ai/screens/family_screen.dart';
+import 'package:serenity_ai/screens/notification_screen.dart';
+import 'package:serenity_ai/screens/profile_screen.dart';
 import '../components/app_color.dart';
 import '../components/app_router.dart';
 import '../domain_model/auth_model.dart';
 import '../domain_model/stress_model.dart';
 import '../provider/auth_provider.dart';
 import '../provider/home_provider.dart';
+import 'mindfulness_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -22,10 +27,10 @@ class HomeScreen extends ConsumerWidget {
         index: navIndex,
         children: const [
           _HomeTab(),
-          _PlaceholderTab(label: 'Analytics', icon: Icons.bar_chart_rounded),
-          _PlaceholderTab(label: 'Mindfulness', icon: Icons.self_improvement),
-          _PlaceholderTab(label: 'Family', icon: Icons.people_outline),
-          _PlaceholderTab(label: 'Profile', icon: Icons.person_outline),
+          AnalyticsScreen(),
+          MindfulnessScreen(),
+          FamilyScreen(),
+          ProfileScreen(),
         ],
       ),
       bottomNavigationBar: _BottomNav(),
@@ -171,7 +176,9 @@ class _HomeTab extends ConsumerWidget {
                     ),
                   ],
                 ),
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (context)=> const NotificationScreen()));
+                },
               ),
               const SizedBox(width: 8),
             ],

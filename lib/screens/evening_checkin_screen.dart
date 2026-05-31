@@ -1,667 +1,572 @@
+// lib/screens/checkin/evening_checkin_screen.dart
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../components/app_color.dart';
-import '../components/checkin_widgets.dart';
-import '../provider/checkin_provider.dart';
+import 'package:uuid/uuid.dart';
+import '../../components/app_color.dart';
+import '../../domain_model/checkin_model.dart';
+import '../../provider/checkin_provider.dart';
+import '../components/widgets/checkin_widgets.dart';
 
 
-// ─────────────────────────────────────────────────────────────────────────────
-// evening_checkin_screen.dart
-//
-// 4-step animated evening check-in flow.
-//
-// Step 0 — Mood wheel          (7 emoji moods, tap to select)
-// Step 1 — Anxiety + clarity   (dual segmented sliders)
-// Step 2 — Work stress + mood  (dual segmented sliders)
-// Step 3 — Daily reflection    (free text with evening-specific prompts)
-//
-// Differences from morning:
-//   • 4 steps instead of 5  (no sleep / energy — those are morning concerns)
-//   • Step 0 is a mood wheel with 7 states instead of moon icons
-//   • Colour theme uses warmer sunset tones
-//   • Gratitude step uses evening reflection prompts
-//   • Calls submitEvening() on the shared CheckInController
-// ─────────────────────────────────────────────────────────────────────────────
+// Reuse the shared page container & success dialog from morning screen
+// (or keep them in a common file — here imported via checkin_widgets)
 
-class EveningCheckinScreen extends ConsumerStatefulWidget {
-  const EveningCheckinScreen({super.key});
+class EveningCheckInScreen extends ConsumerStatefulWidget {
+  const EveningCheckInScreen({super.key});
 
   @override
-  ConsumerState<EveningCheckinScreen> createState() =>
-      _EveningCheckinScreenState();
+  ConsumerState<EveningCheckInScreen> createState() =>
+      _EveningCheckInScreenState();
 }
 
-class _EveningCheckinScreenState
-    extends ConsumerState<EveningCheckinScreen>
-    with TickerProviderStateMixin {
-  final _pageController = PageController();
-  final _reflectionController = TextEditingController();
-  late final AnimationController _entryController;
-  late final Animation<double> _entryFade;
-  late final Animation<Offset> _entrySlide;
+class _EveningCheckInScreenState
+    extends ConsumerState<EveningCheckInScreen> {
+  // Form state
+  int _overallMood = 3;
+  int _anxietyLevel = 3;
+  int _energyLevel = 3;
+  int _mentalClarity = 3;
+  int _workStress = 3;
+  int _sleepQuality = 3; // anticipated sleep quality tonight
+  final _gratitudeCtrl = TextEditingController();
+  final _reflectionCtrl = TextEditingController();
+  List<String> _selectedTriggers = [];
 
+  static const _triggers = [
+    '💼 Work deadlines',
+    '💬 Difficult conversation',
+    '💰 Financial stress',
+    '👨‍👩‍👧 Family tension',
+    '🚗 Commute/travel',
+    '📱 Screen fatigue',
+    '🍔 Poor eating',
+    '🤕 Physical discomfort',
+    '😤 Frustration',
+    '😞 Disappointment',
+  ];
+
+  final _pageController = PageController();
+  int _currentStep = 0;
   static const _totalSteps = 4;
 
   @override
-  void initState() {
-    super.initState();
-    _entryController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
-    _entryFade = CurvedAnimation(
-      parent: _entryController,
-      curve: Curves.easeOut,
-    );
-    _entrySlide = Tween<Offset>(
-      begin: const Offset(0, 0.06),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _entryController,
-      curve: Curves.easeOutCubic,
-    ));
-    _entryController.forward();
-  }
-
-  @override
   void dispose() {
+    _gratitudeCtrl.dispose();
+    _reflectionCtrl.dispose();
     _pageController.dispose();
-    _reflectionController.dispose();
-    _entryController.dispose();
     super.dispose();
   }
 
-  // ── Navigation ─────────────────────────────────────────────────────────────
-
-  void _next() {
-    final step = ref.read(checkinControllerProvider).currentStep;
-    if (step < _totalSteps - 1) {
-      ref.read(checkinControllerProvider.notifier).nextStep();
+  void _nextStep() {
+    if (_currentStep < _totalSteps - 1) {
       _pageController.nextPage(
-        duration: const Duration(milliseconds: 380),
-        curve: Curves.easeInOutCubic,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeInOut,
       );
-      HapticFeedback.selectionClick();
     } else {
       _submit();
     }
   }
 
-  void _prev() {
-    final step = ref.read(checkinControllerProvider).currentStep;
-    if (step > 0) {
-      ref.read(checkinControllerProvider.notifier).prevStep();
+  void _prevStep() {
+    if (_currentStep > 0) {
       _pageController.previousPage(
-        duration: const Duration(milliseconds: 380),
-        curve: Curves.easeInOutCubic,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeInOut,
       );
-      HapticFeedback.selectionClick();
     } else {
       context.pop();
     }
   }
 
   Future<void> _submit() async {
-    FocusScope.of(context).unfocus();
+    final checkIn = CheckInModel(
+      id: const Uuid().v4(),
+      userId: '', // Repository fills this from FirebaseAuth.currentUser
+      type: 'evening',
+      date: DateTime.now(),
+      sleepQuality: _sleepQuality,
+      anxietyLevel: _anxietyLevel,
+      energyLevel: _energyLevel,
+      mentalClarity: _mentalClarity,
+      overallMood: _overallMood,
+      workStress: _workStress,
+      // Store gratitude + reflection together in the note field
+      gratitudeNote: _buildNote(),
+    );
+
     final success =
-    await ref.read(checkinControllerProvider.notifier).submitEvening();
+    await ref.read(checkInControllerProvider.notifier).saveCheckIn(checkIn);
+
     if (success && mounted) {
-      HapticFeedback.mediumImpact();
-      _showCompletionSheet();
+      _showSuccessAndPop();
     }
   }
 
-  // ── Completion bottom sheet ────────────────────────────────────────────────
+  String _buildNote() {
+    final gratitude = _gratitudeCtrl.text.trim();
+    final reflection = _reflectionCtrl.text.trim();
+    if (gratitude.isEmpty && reflection.isEmpty) return '';
+    if (reflection.isEmpty) return 'Gratitude: $gratitude';
+    if (gratitude.isEmpty) return 'Reflection: $reflection';
+    return 'Gratitude: $gratitude\n\nReflection: $reflection';
+  }
 
-  void _showCompletionSheet() {
-    showModalBottomSheet(
+  void _showSuccessAndPop() {
+    showDialog(
       context: context,
-      backgroundColor: Colors.transparent,
-      isDismissible: false,
-      builder: (_) => _CompletionSheet(
+      barrierDismissible: false,
+      builder: (_) => _EveningSuccessDialog(
+        stressScore: _computeStressPreview(),
         onDone: () {
-          Navigator.of(context).pop(); // close sheet
-          context.pop();              // back to home
+          Navigator.of(context).pop();
+          context.pop();
         },
       ),
     );
   }
 
-  // ── Build ──────────────────────────────────────────────────────────────────
+  /// Quick local preview score before Firestore confirmation
+  double _computeStressPreview() {
+    final stressors = (_anxietyLevel + _workStress) * 10.0;
+    final protectors = (_energyLevel + _mentalClarity) * 10.0;
+    return ((stressors - protectors + 100) / 2).clamp(0, 100);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(checkinControllerProvider);
-    final isLast = state.currentStep == _totalSteps - 1;
-    final notifier = ref.read(checkinControllerProvider.notifier);
+    final state = ref.watch(checkInControllerProvider);
 
-    // Error snackbar
-    ref.listen(checkinControllerProvider, (_, next) {
+    ref.listen(checkInControllerProvider, (prev, next) {
       if (next.error != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(next.error!),
             backgroundColor: AppColors.danger,
+            behavior: SnackBarBehavior.floating,
           ),
         );
-        notifier.clearError();
+        ref.read(checkInControllerProvider.notifier).clearError();
       }
     });
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: FadeTransition(
-          opacity: _entryFade,
-          child: SlideTransition(
-            position: _entrySlide,
-            child: Column(
+      body: Column(
+        children: [
+          // ── Hero Header ──────────────────────────────────────────────────
+          CheckInHeroHeader(
+            emoji: '🌙',
+            title: 'Evening Check-In',
+            subtitle: 'Reflect on your day and unwind.',
+            gradientStart: const Color(0xFF2D3561),
+            gradientEnd: const Color(0xFF6C63FF),
+          ),
+
+          // ── Back + Progress ───────────────────────────────────────────────
+          Padding(
+            padding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: Row(
               children: [
-                // ── Top bar ──────────────────────────────────────────────
-                CheckinTopBar(
-                  currentStep: state.currentStep,
-                  totalSteps: _totalSteps,
-                  onBack: _prev,
-                ),
-
-                // ── Pages ─────────────────────────────────────────────────
-                Expanded(
-                  child: PageView(
-                    controller: _pageController,
-                    physics: const NeverScrollableScrollPhysics(),
-                    children: [
-                      // Step 0 — Mood wheel
-                      _MoodWheelStep(
-                        value: state.overallMood,
-                        onChanged: notifier.setOverallMood,
-                      ),
-
-                      // Step 1 — Anxiety & mental clarity
-                      CheckinDualSliderStep(
-                        title: 'Mind check',
-                        subtitle:
-                        'How did anxiety and mental clarity feel today?',
-                        labelA: 'Anxiety level',
-                        iconA: Icons.psychology_outlined,
-                        valueA: state.anxietyLevel,
-                        onChangedA: notifier.setAnxietyLevel,
-                        invertA: false,
-                        labelB: 'Mental clarity',
-                        iconB: Icons.lightbulb_outline_rounded,
-                        valueB: state.mentalClarity,
-                        onChangedB: notifier.setMentalClarity,
-                        invertB: true,
-                      ),
-
-                      // Step 2 — Work stress & energy
-                      CheckinDualSliderStep(
-                        title: 'Work & energy',
-                        subtitle:
-                        'How did work stress and your energy hold up?',
-                        labelA: 'Work stress',
-                        iconA: Icons.work_outline_rounded,
-                        valueA: state.workStress,
-                        onChangedA: notifier.setWorkStress,
-                        invertA: false,
-                        labelB: 'Energy level',
-                        iconB: Icons.bolt_rounded,
-                        valueB: state.energyLevel,
-                        onChangedB: notifier.setEnergyLevel,
-                        invertB: true,
-                      ),
-
-                      // Step 3 — Evening reflection
-                      CheckinGratitudeStep(
-                        controller: _reflectionController,
-                        onChanged: notifier.setGratitudeNote,
-                        isEvening: true,
-                      ),
-                    ],
+                GestureDetector(
+                  onTap: _prevStep,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: const Icon(Icons.arrow_back_ios_new_rounded,
+                        size: 16, color: AppColors.textDark),
                   ),
                 ),
-
-                // ── CTA ───────────────────────────────────────────────────
-                CheckinBottomCta(
-                  label: isLast ? 'Complete check-in' : 'Continue',
-                  isLoading: state.isSubmitting,
-                  onTap: _next,
+                const SizedBox(width: 14),
+                Expanded(
+                  child: CheckInProgressBar(
+                    current: _currentStep + 1,
+                    total: _totalSteps,
+                  ),
                 ),
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Step 0 — Mood wheel
-//
-// 7 emoji mood states in two rows.
-// Tapping one highlights it with an animated glow ring and shows
-// the mood label + a contextual colour.
-// The overallMood field (1–5) maps to the 7-state wheel via _moodToSlider().
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _MoodWheelStep extends StatefulWidget {
-  final int value;           // 1–5 stored value
-  final ValueChanged<int> onChanged;
-
-  const _MoodWheelStep({
-    required this.value,
-    required this.onChanged,
-  });
-
-  @override
-  State<_MoodWheelStep> createState() => _MoodWheelStepState();
-}
-
-class _MoodWheelStepState extends State<_MoodWheelStep>
-    with SingleTickerProviderStateMixin {
-  // Internal 0-based index into the 7 moods
-  int _selectedIndex = 3; // default = neutral
-
-  late final AnimationController _pulseController;
-  late final Animation<double> _pulseAnim;
-
-  // ── Mood data ─────────────────────────────────────────────────────────────
-
-  static const _moods = [
-    _Mood('😢', 'Sad',        Color(0xFF5C6BC0)),
-    _Mood('😟', 'Anxious',    Color(0xFF7E57C2)),
-    _Mood('😐', 'Meh',        Color(0xFF78909C)),
-    _Mood('🙂', 'Okay',       Color(0xFF26A69A)),
-    _Mood('😊', 'Good',       Color(0xFF42A5F5)),
-    _Mood('😄', 'Happy',      Color(0xFF66BB6A)),
-    _Mood('🤩', 'Fantastic',  Color(0xFFFFCA28)),
-  ];
-
-  /// Maps 7-index → 1–5 scale for CheckInModel storage.
-  /// 0,1 → 1 | 2 → 2 | 3 → 3 | 4 → 4 | 5,6 → 5
-  static int _indexToSlider(int i) {
-    if (i <= 1) return 1;
-    if (i == 2) return 2;
-    if (i == 3) return 3;
-    if (i == 4) return 4;
-    return 5;
-  }
-
-  /// Maps 1–5 → nearest 7-index (reverse of above).
-  static int _sliderToIndex(int v) {
-    switch (v) {
-      case 1: return 0;
-      case 2: return 2;
-      case 3: return 3;
-      case 4: return 4;
-      case 5: return 6;
-      default: return 3;
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedIndex = _sliderToIndex(widget.value);
-
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-    _pulseAnim = Tween<double>(begin: 1.0, end: 1.12).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
-  }
-
-  void _select(int index) {
-    HapticFeedback.selectionClick();
-    setState(() => _selectedIndex = index);
-    _pulseController.forward(from: 0).then((_) => _pulseController.reverse());
-    widget.onChanged(_indexToSlider(index));
-  }
-
-  // ── Build ─────────────────────────────────────────────────────────────────
-
-  @override
-  Widget build(BuildContext context) {
-    final mood = _moods[_selectedIndex];
-
-    return CheckinStepShell(
-      emoji: '🌆',
-      title: 'How are you\nfeeling tonight?',
-      subtitle: 'Tap the emoji that best matches your mood right now.',
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Selected mood hero display
-          AnimatedBuilder(
-            animation: _pulseAnim,
-            builder: (context, child) => Transform.scale(
-              scale: _pulseAnim.value,
-              child: child,
-            ),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              width: 96,
-              height: 96,
-              decoration: BoxDecoration(
-                color: mood.color.withOpacity(0.12),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: mood.color.withOpacity(0.4),
-                  width: 2.5,
+          // ── Pages ─────────────────────────────────────────────────────────
+          Expanded(
+            child: PageView(
+              controller: _pageController,
+              physics: const NeverScrollableScrollPhysics(),
+              onPageChanged: (i) => setState(() => _currentStep = i),
+              children: [
+                // Step 1: Mood & Energy
+                _EveningPage(
+                  children: [
+                    EmojiMoodPicker(
+                      label: 'How was your day overall?',
+                      description:
+                      'Choose the emoji that feels most accurate.',
+                      value: _overallMood,
+                      onChanged: (v) =>
+                          setState(() => _overallMood = v),
+                      emojis: const [
+                        '😞',
+                        '😕',
+                        '😐',
+                        '🙂',
+                        '😄'
+                      ],
+                      labels: const [
+                        'Rough',
+                        'Hard',
+                        'So-so',
+                        'Good',
+                        'Great'
+                      ],
+                    ),
+                    const SizedBox(height: 28),
+                    CheckInSliderQuestion(
+                      label: 'Energy Level',
+                      description: 'How are your energy reserves right now?',
+                      value: _energyLevel,
+                      onChanged: (v) =>
+                          setState(() => _energyLevel = v),
+                      lowLabel: 'Drained',
+                      highLabel: 'Still energised',
+                      activeColor: const Color(0xFF4CAF50),
+                    ),
+                  ],
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: mood.color.withOpacity(0.25),
-                    blurRadius: 24,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              child: Center(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  transitionBuilder: (child, anim) => ScaleTransition(
-                    scale: anim,
-                    child: child,
-                  ),
-                  child: Text(
-                    mood.emoji,
-                    key: ValueKey(_selectedIndex),
-                    style: const TextStyle(fontSize: 48),
-                  ),
+
+                // Step 2: Stress & Anxiety
+                _EveningPage(
+                  children: [
+                    CheckInSliderQuestion(
+                      label: 'Work / Study Stress',
+                      description:
+                      'How stressful was work or study today?',
+                      value: _workStress,
+                      onChanged: (v) =>
+                          setState(() => _workStress = v),
+                      lowLabel: 'Very light',
+                      highLabel: 'Very heavy',
+                      activeColor: const Color(0xFFFF9800),
+                    ),
+                    const SizedBox(height: 28),
+                    CheckInSliderQuestion(
+                      label: 'Anxiety / Worry',
+                      description:
+                      'How much did worry weigh on you today?',
+                      value: _anxietyLevel,
+                      onChanged: (v) =>
+                          setState(() => _anxietyLevel = v),
+                      lowLabel: 'At ease',
+                      highLabel: 'Very anxious',
+                      activeColor: const Color(0xFFF44336),
+                    ),
+                    const SizedBox(height: 28),
+                    CheckInSliderQuestion(
+                      label: 'Mental Clarity',
+                      description: 'How clear-headed did you feel today?',
+                      value: _mentalClarity,
+                      onChanged: (v) =>
+                          setState(() => _mentalClarity = v),
+                      lowLabel: 'Very foggy',
+                      highLabel: 'Very clear',
+                      activeColor: const Color(0xFF48CAE4),
+                    ),
+                  ],
                 ),
-              ),
+
+                // Step 3: Triggers
+                _EveningPage(
+                  children: [
+                    const _SectionDivider(
+                      icon: '⚡',
+                      title: 'What stressed you today?',
+                      subtitle:
+                      'Select all that apply — helps us spot patterns.',
+                    ),
+                    const SizedBox(height: 16),
+                    QuickTagSelector(
+                      label: '',
+                      options: _triggers,
+                      selected: _selectedTriggers,
+                      onChanged: (v) =>
+                          setState(() => _selectedTriggers = v),
+                    ),
+                    const SizedBox(height: 28),
+                    EmojiMoodPicker(
+                      label: 'Anticipated Sleep Quality',
+                      description:
+                      'How well do you expect to sleep tonight?',
+                      value: _sleepQuality,
+                      onChanged: (v) =>
+                          setState(() => _sleepQuality = v),
+                      emojis: const [
+                        '😫',
+                        '😴',
+                        '😐',
+                        '🙂',
+                        '😊'
+                      ],
+                      labels: const [
+                        'Terrible',
+                        'Poor',
+                        'OK',
+                        'Good',
+                        'Great'
+                      ],
+                    ),
+                  ],
+                ),
+
+                // Step 4: Gratitude & Reflection
+                _EveningPage(
+                  children: [
+                    CheckInTextArea(
+                      label: '🙏 Evening Gratitude',
+                      description:
+                      'What are you thankful for today?',
+                      hint:
+                      'e.g. I\'m grateful for a productive meeting and a good lunch...',
+                      controller: _gratitudeCtrl,
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 24),
+                    CheckInTextArea(
+                      label: '💭 Daily Reflection',
+                      description:
+                      'What\'s one thing you\'d do differently tomorrow?',
+                      hint:
+                      'e.g. I\'d take more breaks and drink more water...',
+                      controller: _reflectionCtrl,
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 20),
+                    // Stress preview card
+                    _StressPreviewCard(score: _computeStressPreview()),
+                  ],
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 16),
 
-          // Mood label
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            child: Text(
-              mood.label,
-              key: ValueKey(_selectedIndex),
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: mood.color,
-                fontWeight: FontWeight.w700,
-              ),
+          // ── Bottom CTA ────────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+            child: CheckInSubmitButton(
+              label: _currentStep == _totalSteps - 1
+                  ? 'Complete Check-In'
+                  : 'Continue',
+              isLoading: state.isLoading,
+              onPressed: state.isLoading ? null : _nextStep,
             ),
           ),
-          const SizedBox(height: 32),
-
-          // Emoji grid — two rows: 4 top, 3 bottom
-          _buildMoodGrid(),
         ],
       ),
     );
   }
+}
 
-  Widget _buildMoodGrid() {
-    return Column(
+// ─── Evening page container ───────────────────────────────────────────────────
+class _EveningPage extends StatelessWidget {
+  final List<Widget> children;
+  const _EveningPage({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
+      ),
+    );
+  }
+}
+
+// ─── Section divider with icon ────────────────────────────────────────────────
+class _SectionDivider extends StatelessWidget {
+  final String icon;
+  final String title;
+  final String subtitle;
+
+  const _SectionDivider({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Row 1 — indices 0–3
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: List.generate(4, (i) => _MoodTile(
-            mood: _moods[i],
-            isSelected: _selectedIndex == i,
-            onTap: () => _select(i),
-          )),
-        ),
-        const SizedBox(height: 16),
-        // Row 2 — indices 4–6
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: List.generate(3, (i) => _MoodTile(
-            mood: _moods[i + 4],
-            isSelected: _selectedIndex == i + 4,
-            onTap: () => _select(i + 4),
-          )),
+        Text(icon, style: const TextStyle(fontSize: 22)),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 2),
+              Text(subtitle,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: AppColors.textLight)),
+            ],
+          ),
         ),
       ],
     );
   }
 }
 
-// Individual mood tile widget
-class _MoodTile extends StatelessWidget {
-  final _Mood mood;
-  final bool isSelected;
-  final VoidCallback onTap;
+// ─── Stress preview card ──────────────────────────────────────────────────────
+class _StressPreviewCard extends StatelessWidget {
+  final double score;
+  const _StressPreviewCard({required this.score});
 
-  const _MoodTile({
-    required this.mood,
-    required this.isSelected,
-    required this.onTap,
+  String get _level {
+    if (score <= 25) return 'Low';
+    if (score <= 50) return 'Moderate';
+    if (score <= 75) return 'High';
+    return 'Critical';
+  }
+
+  String get _message {
+    if (score <= 25) return 'You had a calm day. Keep it up! 🌿';
+    if (score <= 50) return 'Moderate stress day. A good night\'s rest will help. 🌙';
+    if (score <= 75) return 'It was a tough day. Try a breathing exercise before sleep. 🧘';
+    return 'High stress today. Be gentle with yourself tonight. 💜';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = AppColors.stressColor(score);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.25)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                score.toStringAsFixed(0),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Estimated stress: $_level',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  _message,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: AppColors.textMedium),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Evening success dialog ───────────────────────────────────────────────────
+class _EveningSuccessDialog extends StatelessWidget {
+  final double stressScore;
+  final VoidCallback onDone;
+
+  const _EveningSuccessDialog({
+    required this.stressScore,
+    required this.onDone,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOut,
-        width: 68,
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? mood.color.withOpacity(0.12)
-              : AppColors.surfaceVariant,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected
-                ? mood.color.withOpacity(0.5)
-                : AppColors.border,
-            width: isSelected ? 1.5 : 1,
-          ),
-        ),
+    final color = AppColors.stressColor(stressScore);
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Padding(
+        padding: const EdgeInsets.all(28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AnimatedScale(
-              scale: isSelected ? 1.2 : 1.0,
-              duration: const Duration(milliseconds: 220),
-              child: Text(
-                mood.emoji,
-                style: const TextStyle(fontSize: 28),
-              ),
-            ),
-            const SizedBox(height: 4),
+            const Text('🌙', style: TextStyle(fontSize: 56)),
+            const SizedBox(height: 16),
             Text(
-              mood.label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight:
-                isSelected ? FontWeight.w600 : FontWeight.normal,
-                color: isSelected ? mood.color : AppColors.textLight,
-              ),
+              'Evening logged!',
+              style: Theme.of(context).textTheme.headlineSmall,
+              textAlign: TextAlign.center,
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// Immutable mood data class
-class _Mood {
-  final String emoji;
-  final String label;
-  final Color color;
-
-  const _Mood(this.emoji, this.label, this.color);
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Completion bottom sheet
-// Shown after a successful submitEvening() call.
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _CompletionSheet extends StatefulWidget {
-  final VoidCallback onDone;
-
-  const _CompletionSheet({required this.onDone});
-
-  @override
-  State<_CompletionSheet> createState() => _CompletionSheetState();
-}
-
-class _CompletionSheetState extends State<_CompletionSheet>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _scale;
-  late final Animation<double> _fade;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-    _scale = Tween<double>(begin: 0.6, end: 1.0).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut),
-    );
-    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
-    _ctrl.forward();
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.fromLTRB(28, 36, 28, 32),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(28),
-      ),
-      child: FadeTransition(
-        opacity: _fade,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Animated check icon
-            ScaleTransition(
-              scale: _scale,
-              child: Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withOpacity(0.3),
-                      blurRadius: 24,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.check_rounded,
-                  color: Colors.white,
-                  size: 40,
+            const SizedBox(height: 8),
+            Text(
+              'Your day has been recorded. Sleep well 💜',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.textLight,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            // Score pill
+            Container(
+              padding:
+              const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: color.withOpacity(0.3)),
+              ),
+              child: Text(
+                'Today\'s stress score: ${stressScore.toStringAsFixed(0)} / 100',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: color,
                 ),
               ),
             ),
             const SizedBox(height: 24),
-
-            Text(
-              'Evening check-in\ncomplete 🌙',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                height: 1.3,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            Text(
-              'Great job taking time for yourself today.\nYour stress score has been updated.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.textLight,
-                height: 1.6,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Streak nudge
-            Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFF6B35).withOpacity(0.08),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: const Color(0xFFFF6B35).withOpacity(0.2),
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.local_fire_department_rounded,
-                    color: Color(0xFFFF6B35),
-                    size: 18,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Keep your streak going — see you tomorrow!',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFFFF6B35).withOpacity(0.9),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 28),
-
-            // Done button
             SizedBox(
               width: double.infinity,
-              height: 52,
-              child: Material(
-                borderRadius: BorderRadius.circular(14),
-                child: InkWell(
-                  onTap: widget.onDone,
-                  borderRadius: BorderRadius.circular(14),
-                  child: Ink(
-                    decoration: BoxDecoration(
-                      gradient: AppColors.primaryGradient,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'Back to home',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+              child: ElevatedButton(
+                onPressed: onDone,
+                child: const Text('Back to Home'),
               ),
             ),
           ],

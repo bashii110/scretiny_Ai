@@ -3,30 +3,45 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../auth_repo.dart';
 import '../domain_model/auth_model.dart';
 
-// ─── Repository Provider ──────────────────────────────────────────────────────
+// ─── Repository provider ──────────────────────────────────────────────────────
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository();
 });
 
-// ─── Firebase Auth State Stream ───────────────────────────────────────────────
+// ─── Firebase Auth state stream ───────────────────────────────────────────────
 final authStateProvider = StreamProvider<User?>((ref) {
   return ref.watch(authRepositoryProvider).authStateChanges;
 });
 
-// ─── Current User Profile Stream ─────────────────────────────────────────────
+// ─── Current user profile stream ─────────────────────────────────────────────
+//
+// On every Auth sign-in this calls ensureUserDocument() so the Firestore
+// document is always created if it was missing. The profile stream is then
+// attached to that document for real-time updates.
 final userProfileProvider = StreamProvider<UserModel?>((ref) {
   final authState = ref.watch(authStateProvider);
+
   return authState.when(
-    data: (user) {
-      if (user == null) return Stream.value(null);
-      return ref.watch(authRepositoryProvider).getUserProfile(user.uid);
+    data: (firebaseUser) {
+      if (firebaseUser == null) return Stream.value(null);
+
+      // Ensure doc exists — non-blocking, result not awaited here because
+      // getUserProfile() below will stream the document once it's written.
+      ref
+          .read(authRepositoryProvider)
+          .ensureUserDocument(firebaseUser)
+          .catchError((_) {});   // errors are logged inside ensureUserDocument
+
+      return ref
+          .watch(authRepositoryProvider)
+          .getUserProfile(firebaseUser.uid);
     },
     loading: () => Stream.value(null),
-    error: (_, __) => Stream.value(null),
+    error:   (_, __) => Stream.value(null),
   );
 });
 
-// ─── Auth Controller State ────────────────────────────────────────────────────
+// ─── Auth controller state ────────────────────────────────────────────────────
 class AuthState {
   final bool isLoading;
   final String? error;
@@ -39,18 +54,18 @@ class AuthState {
   });
 
   AuthState copyWith({
-    bool? isLoading,
+    bool?   isLoading,
     String? error,
-    bool? isSuccess,
+    bool?   isSuccess,
   }) =>
       AuthState(
         isLoading: isLoading ?? this.isLoading,
-        error: error,
+        error:     error,
         isSuccess: isSuccess ?? this.isSuccess,
       );
 }
 
-// ─── Auth Controller ──────────────────────────────────────────────────────────
+// ─── Auth controller ──────────────────────────────────────────────────────────
 class AuthController extends StateNotifier<AuthState> {
   final AuthRepository _repository;
 
@@ -85,11 +100,11 @@ class AuthController extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true);
     try {
       await _repository.registerWithEmail(
-        name: name,
-        email: email,
-        password: password,
-        age: age,
-        language: language,
+        name:            name,
+        email:           email,
+        password:        password,
+        age:             age,
+        language:        language,
         faithPreference: faithPreference,
       );
       state = const AuthState(isSuccess: true);
@@ -147,7 +162,8 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   void clearError() {
-    state = AuthState(isLoading: state.isLoading, isSuccess: state.isSuccess);
+    state = AuthState(
+        isLoading: state.isLoading, isSuccess: state.isSuccess);
   }
 }
 
