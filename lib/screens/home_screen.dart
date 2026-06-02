@@ -60,11 +60,31 @@ class _BottomNav extends ConsumerWidget {
           height: 64,
           child: Row(
             children: [
-              _NavItem(icon: Icons.home_rounded, label: 'Home', index: 0, current: index),
-              _NavItem(icon: Icons.bar_chart_rounded, label: 'Analytics', index: 1, current: index),
-              _NavItem(icon: Icons.self_improvement, label: 'Mindful', index: 2, current: index),
-              _NavItem(icon: Icons.people_outline, label: 'Family', index: 3, current: index),
-              _NavItem(icon: Icons.person_outline, label: 'Profile', index: 4, current: index),
+              _NavItem(
+                  icon: Icons.home_rounded,
+                  label: 'Home',
+                  index: 0,
+                  current: index),
+              _NavItem(
+                  icon: Icons.bar_chart_rounded,
+                  label: 'Analytics',
+                  index: 1,
+                  current: index),
+              _NavItem(
+                  icon: Icons.self_improvement,
+                  label: 'Mindful',
+                  index: 2,
+                  current: index),
+              _NavItem(
+                  icon: Icons.people_outline,
+                  label: 'Family',
+                  index: 3,
+                  current: index),
+              _NavItem(
+                  icon: Icons.person_outline,
+                  label: 'Profile',
+                  index: 4,
+                  current: index),
             ],
           ),
         ),
@@ -100,7 +120,8 @@ class _NavItem extends ConsumerWidget {
             children: [
               AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 decoration: BoxDecoration(
                   color: isSelected
                       ? AppColors.primary.withOpacity(0.12)
@@ -177,7 +198,10 @@ class _HomeTab extends ConsumerWidget {
                   ],
                 ),
                 onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context)=> const NotificationScreen()));
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const NotificationScreen()));
                 },
               ),
               const SizedBox(width: 8),
@@ -263,8 +287,18 @@ class _GreetingHeader extends StatelessWidget {
   String _formattedDate() {
     final now = DateTime.now();
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     return '${days[now.weekday - 1]}, ${months[now.month - 1]} ${now.day}';
@@ -280,7 +314,8 @@ class _StressGaugeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final score = log?.finalStressScore ?? 0.0;
     final level = log?.stressLevel ?? 'no data';
-    final color = log != null ? AppColors.stressColor(score) : AppColors.textLight;
+    final color =
+        log != null ? AppColors.stressColor(score) : AppColors.textLight;
     final hasData = log != null;
 
     return Container(
@@ -288,13 +323,13 @@ class _StressGaugeCard extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: hasData
             ? LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            color.withOpacity(0.12),
-            color.withOpacity(0.04),
-          ],
-        )
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  color.withOpacity(0.12),
+                  color.withOpacity(0.04),
+                ],
+              )
             : null,
         color: hasData ? null : AppColors.surface,
         borderRadius: BorderRadius.circular(24),
@@ -314,18 +349,18 @@ class _StressGaugeCard extends StatelessWidget {
                     Text(
                       "Today's Stress",
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textLight,
-                        fontWeight: FontWeight.w500,
-                      ),
+                            color: AppColors.textLight,
+                            fontWeight: FontWeight.w500,
+                          ),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       hasData ? score.toStringAsFixed(0) : '--',
                       style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                        color: color,
-                        fontWeight: FontWeight.bold,
-                        height: 1,
-                      ),
+                            color: color,
+                            fontWeight: FontWeight.bold,
+                            height: 1,
+                          ),
                     ),
                     const SizedBox(height: 4),
                     _StressLevelBadge(level: level, color: color),
@@ -351,7 +386,8 @@ class _StressGaugeCard extends StatelessWidget {
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.touch_app_outlined, size: 16, color: AppColors.primary),
+                  Icon(Icons.touch_app_outlined,
+                      size: 16, color: AppColors.primary),
                   SizedBox(width: 8),
                   Text(
                     'Tap Quick Scan to measure stress',
@@ -486,10 +522,20 @@ class _ScoreBreakdownRow extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
-        _BreakdownItem(label: 'HRV', value: log.cameraHRVScore, icon: Icons.camera_alt_outlined),
-        _BreakdownItem(label: 'Voice', value: log.voiceScore, icon: Icons.mic_outlined),
-        _BreakdownItem(label: 'Usage', value: log.phoneUsageScore, icon: Icons.phone_android_outlined),
-        _BreakdownItem(label: 'Check-in', value: log.checkInScore, icon: Icons.checklist_outlined),
+        _BreakdownItem(
+            label: 'HRV',
+            value: log.cameraHRVScore,
+            icon: Icons.camera_alt_outlined),
+        _BreakdownItem(
+            label: 'Voice', value: log.voiceScore, icon: Icons.mic_outlined),
+        _BreakdownItem(
+            label: 'Usage',
+            value: log.phoneUsageScore,
+            icon: Icons.phone_android_outlined),
+        _BreakdownItem(
+            label: 'Check-in',
+            value: log.checkInScore,
+            icon: Icons.checklist_outlined),
       ],
     );
   }
@@ -538,9 +584,9 @@ class _BreakdownItem extends StatelessWidget {
 }
 
 // ─── Quick Actions Row ────────────────────────────────────────────────────────
-class _QuickActionsRow extends StatelessWidget {
+class _QuickActionsRow extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -583,7 +629,9 @@ class _QuickActionsRow extends StatelessWidget {
                 icon: Icons.people_outline,
                 label: 'Family',
                 color: const Color(0xFFFF9800),
-                onTap: () {},
+                onTap: () {
+                  ref.read(bottomNavIndexProvider.notifier).state = 3;
+                },
               ),
             ),
           ],
@@ -715,15 +763,15 @@ class _CheckInCard extends StatelessWidget {
           color: isCompleted
               ? AppColors.success.withOpacity(0.08)
               : isActive
-              ? AppColors.primary.withOpacity(0.06)
-              : AppColors.surface,
+                  ? AppColors.primary.withOpacity(0.06)
+                  : AppColors.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isCompleted
                 ? AppColors.success.withOpacity(0.3)
                 : isActive
-                ? AppColors.primary.withOpacity(0.25)
-                : AppColors.border,
+                    ? AppColors.primary.withOpacity(0.25)
+                    : AppColors.border,
             width: 1.5,
           ),
         ),
@@ -742,11 +790,13 @@ class _CheckInCard extends StatelessWidget {
                       color: AppColors.success,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.check, color: Colors.white, size: 14),
+                    child:
+                        const Icon(Icons.check, color: Colors.white, size: 14),
                   )
                 else if (isActive)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: AppColors.primary.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(6),
@@ -767,19 +817,19 @@ class _CheckInCard extends StatelessWidget {
             Text(
               title,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: isCompleted
-                    ? AppColors.success
-                    : isActive
-                    ? AppColors.primary
-                    : AppColors.textDark,
-              ),
+                    color: isCompleted
+                        ? AppColors.success
+                        : isActive
+                            ? AppColors.primary
+                            : AppColors.textDark,
+                  ),
             ),
             const SizedBox(height: 2),
             Text(
               isCompleted ? 'Completed ✓' : subtitle,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.textLight,
-              ),
+                    color: AppColors.textLight,
+                  ),
             ),
           ],
         ),
@@ -885,26 +935,28 @@ class _StatCard extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: const TextStyle(fontSize: 11, color: AppColors.textLight),
+                style:
+                    const TextStyle(fontSize: 11, color: AppColors.textLight),
               ),
               const SizedBox(height: 2),
-              Row(                                        // ← fix #3
+              Row(
+                // ← fix #3
                 crossAxisAlignment: CrossAxisAlignment.baseline,
                 textBaseline: TextBaseline.alphabetic,
                 children: [
                   Text(
                     value,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      height: 1,
-                    ),
+                          fontWeight: FontWeight.bold,
+                          height: 1,
+                        ),
                   ),
                   const SizedBox(width: 3),
                   Text(
                     suffix,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textLight,
-                    ),
+                          color: AppColors.textLight,
+                        ),
                   ),
                 ],
               ),
@@ -955,17 +1007,17 @@ class _DailyTipCard extends StatelessWidget {
                 Text(
                   'Daily Wellness Tip',
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: Colors.white.withOpacity(0.75),
-                    letterSpacing: 0.3,
-                  ),
+                        color: Colors.white.withOpacity(0.75),
+                        letterSpacing: 0.3,
+                      ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   tip,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white,
-                    height: 1.5,
-                  ),
+                        color: Colors.white,
+                        height: 1.5,
+                      ),
                 ),
               ],
             ),
@@ -995,9 +1047,12 @@ class _WeeklyTrendCard extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('7-Day Trend', style: Theme.of(context).textTheme.titleMedium),
+              Text('7-Day Trend',
+                  style: Theme.of(context).textTheme.titleMedium),
               TextButton(
-                onPressed: () {},
+                onPressed: () {
+                  ref.read(bottomNavIndexProvider.notifier).state = 1;
+                },
                 style: TextButton.styleFrom(
                   padding: EdgeInsets.zero,
                   minimumSize: Size.zero,
@@ -1009,9 +1064,8 @@ class _WeeklyTrendCard extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           historyAsync.when(
-            data: (logs) => logs.isEmpty
-                ? _EmptyTrendState()
-                : _TrendBars(logs: logs),
+            data: (logs) =>
+                logs.isEmpty ? _EmptyTrendState() : _TrendBars(logs: logs),
             loading: () => const SizedBox(
               height: 80,
               child: Center(
@@ -1035,8 +1089,8 @@ class _EmptyTrendState extends StatelessWidget {
         child: Text(
           'Complete check-ins to see your trend',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: AppColors.textLight,
-          ),
+                color: AppColors.textLight,
+              ),
         ),
       ),
     );
@@ -1064,10 +1118,10 @@ class _TrendBars extends StatelessWidget {
         children: List.generate(7, (i) {
           final weekday = i + 1; // 1=Mon … 7=Sun
           final score = map[weekday];
-          final color = score != null
-              ? AppColors.stressColor(score)
-              : AppColors.border;
-          final barH = score != null ? (score / 100 * 56).clamp(4.0, 56.0) : 4.0;
+          final color =
+              score != null ? AppColors.stressColor(score) : AppColors.border;
+          final barH =
+              score != null ? (score / 100 * 56).clamp(4.0, 56.0) : 4.0;
           final isToday = DateTime.now().weekday == weekday;
 
           return Column(
@@ -1102,50 +1156,12 @@ class _TrendBars extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 10,
                   color: isToday ? AppColors.primary : AppColors.textLight,
-                  fontWeight:
-                  isToday ? FontWeight.w700 : FontWeight.normal,
+                  fontWeight: isToday ? FontWeight.w700 : FontWeight.normal,
                 ),
               ),
             ],
           );
         }),
-      ),
-    );
-  }
-}
-
-// ─── Placeholder Tab (for unbuilt tabs) ──────────────────────────────────────
-class _PlaceholderTab extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  const _PlaceholderTab({required this.label, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(label)),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 64, color: AppColors.primary.withOpacity(0.4)),
-            const SizedBox(height: 16),
-            Text(
-              '$label Screen',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: AppColors.textLight,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Coming soon',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: AppColors.textLight),
-            ),
-          ],
-        ),
       ),
     );
   }

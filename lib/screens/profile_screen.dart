@@ -218,7 +218,7 @@ class _ProfileBody extends ConsumerWidget {
               const SizedBox(height: 12),
               Center(
                 child: Text(
-                  'SerenityAI · Your mental wellness companion',
+                  'Scranity AI · Your mental wellness companion',
                   style: Theme.of(context)
                       .textTheme
                       .bodySmall
@@ -322,7 +322,7 @@ class _AvatarHeader extends StatelessWidget {
           Container(
             width: 68,
             height: 68,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               gradient: AppColors.primaryGradient,
               shape: BoxShape.circle,
             ),
@@ -381,9 +381,9 @@ class _AvatarHeader extends StatelessWidget {
                         color: AppColors.secondary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Text(
+                      child: const Text(
                         'Member',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
                           color: AppColors.secondary,
                           fontWeight: FontWeight.w500,

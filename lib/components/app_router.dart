@@ -4,6 +4,7 @@ import 'package:serenity_ai/provider/auth_provider.dart';
 import 'package:serenity_ai/screens/notification_screen.dart';
 import 'package:serenity_ai/screens/splash_screen.dart';
 import 'package:serenity_ai/screens/stressresult_screen.dart';
+import 'package:serenity_ai/screens/therapist_screen.dart';
 import 'package:serenity_ai/screens/voicecheckin_screen.dart';
 import '../screens/breathing screen.dart';
 import '../screens/camerascan_screen.dart';
@@ -113,10 +114,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.mindfulness,
         builder: (context, state) => const MindfulnessScreen(),
       ),
-      // GoRoute(
-      //   path: AppRoutes.mindfulness,
-      //   builder: (context, state) => const NotificationScreen(),
-      // ),
+      GoRoute(
+        path: AppRoutes.mindfulness,
+        builder: (context, state) => const TherapistScreen(),
+      ),
       // Add remaining routes as screens are built
     ],
   );
