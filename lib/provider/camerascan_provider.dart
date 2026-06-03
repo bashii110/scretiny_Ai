@@ -12,55 +12,30 @@ import '../stress_calculator.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // camera_scan_provider.dart
-//
-// State and logic for the 30-second rPPG (remote photoplethysmography) scan.
-//
-// How it works:
-//   1. CameraController captures frames at 30 fps with the torch on.
-//   2. Each frame's average red-channel value is sampled into a ring buffer.
-//   3. After 30 s the buffer is processed:
-//        a. DC-offset removal (subtract mean)
-//        b. Peak detection → inter-beat intervals (IBI)
-//        c. HRV = RMSSD of consecutive IBI differences
-//   4. HRV is converted to a 0–100 stress score via StressCalculator.hrvToStress()
-//   5. A StressLogModel is upserted to Firestore (merges with today's existing
-//      log if one exists from check-in).
-//
-// Providers:
-//   • cameraScanControllerProvider  – StateNotifier driving the scan UI
-//   • availableCamerasProvider      – FutureProvider<List<CameraDescription>>
 // ─────────────────────────────────────────────────────────────────────────────
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 String? _uid() => FirebaseAuth.instance.currentUser?.uid;
 FirebaseFirestore get _db => FirebaseFirestore.instance;
 const _uuid = Uuid();
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Scan phases
-// ─────────────────────────────────────────────────────────────────────────────
-
+// ─── Scan phases ──────────────────────────────────────────────────────────────
 enum ScanPhase {
-  idle,        // before scan starts
-  preparing,   // camera initialising + torch warming up (2 s)
-  scanning,    // actively sampling frames
-  processing,  // computing HRV from buffer
-  complete,    // result ready
-  error,       // unrecoverable failure
+  idle,
+  preparing,
+  scanning,
+  processing,
+  complete,
+  error,
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// State
-// ─────────────────────────────────────────────────────────────────────────────
-
+// ─── State ────────────────────────────────────────────────────────────────────
 class CameraScanState {
   final ScanPhase phase;
-  final int elapsedSeconds;   // 0–30 during scanning
-  final int totalSeconds;     // always 30
-  final double? hrvMs;        // computed HRV in milliseconds
-  final double? stressScore;  // 0–100
-  final String? stressLevel;  // low / medium / high / critical
+  final int elapsedSeconds;
+  final int totalSeconds;
+  final double? hrvMs;        // raw HRV value in milliseconds (for display)
+  final double? stressScore;  // 0–100 stress score derived from HRV
+  final String? stressLevel;
   final String? errorMessage;
   final bool isSaving;
 
@@ -75,8 +50,7 @@ class CameraScanState {
     this.isSaving = false,
   });
 
-  double get progress =>
-      elapsedSeconds / totalSeconds;
+  double get progress => elapsedSeconds / totalSeconds;
 
   bool get isActive =>
       phase == ScanPhase.preparing || phase == ScanPhase.scanning;
@@ -102,23 +76,16 @@ class CameraScanState {
       );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// rPPG signal processor  (pure functions, no Flutter deps)
-// ─────────────────────────────────────────────────────────────────────────────
-
+// ─── rPPG signal processor ────────────────────────────────────────────────────
 class _RppgProcessor {
-  /// Extracts the mean red-channel value from a [CameraImage] in YUV420 or
-  /// BGRA8888 format. Returns null if the plane layout is unexpected.
   static double? extractRedMean(CameraImage image) {
     try {
       if (image.format.group == ImageFormatGroup.yuv420) {
-        // Y-plane brightness correlates well with red on torch-lit finger
         final y = image.planes[0].bytes;
         double sum = 0;
         for (final b in y) sum += b;
         return sum / y.length;
       } else if (image.format.group == ImageFormatGroup.bgra8888) {
-        // BGRA: R is at index 2
         final bytes = image.planes[0].bytes;
         double sum = 0;
         int count = 0;
@@ -134,16 +101,12 @@ class _RppgProcessor {
     }
   }
 
-  /// Detects peaks in [signal] using a simple threshold + refractory period.
-  /// Returns list of sample indices where heartbeats occurred.
   static List<int> detectPeaks(List<double> signal, {int fps = 30}) {
     if (signal.length < fps * 2) return [];
 
-    // Remove DC offset
     final mean = signal.reduce((a, b) => a + b) / signal.length;
     final centred = signal.map((v) => v - mean).toList();
 
-    // Compute standard deviation for dynamic threshold
     final variance = centred
         .map((v) => v * v)
         .reduce((a, b) => a + b) /
@@ -151,9 +114,7 @@ class _RppgProcessor {
     final std = math.sqrt(variance);
     final threshold = std * 0.5;
 
-    // Refractory period: min 400 ms between beats (max 150 bpm)
     final refractory = (fps * 0.4).round();
-
     final peaks = <int>[];
     int lastPeak = -refractory;
 
@@ -169,15 +130,12 @@ class _RppgProcessor {
     return peaks;
   }
 
-  /// Computes RMSSD (root mean square of successive differences) from peak
-  /// indices, returning HRV in milliseconds.
   static double computeRmssd(List<int> peaks, {int fps = 30}) {
     if (peaks.length < 3) return 0.0;
 
     final ibis = <double>[];
     for (int i = 1; i < peaks.length; i++) {
       final ibiMs = (peaks[i] - peaks[i - 1]) * (1000 / fps);
-      // Physiologically valid IBI: 300–2000 ms (30–200 bpm)
       if (ibiMs >= 300 && ibiMs <= 2000) ibis.add(ibiMs);
     }
 
@@ -191,7 +149,6 @@ class _RppgProcessor {
     return math.sqrt(sumSqDiff / (ibis.length - 1));
   }
 
-  /// Derives a plausible heart rate from peaks for display purposes.
   static double computeHeartRate(List<int> peaks, {int fps = 30}) {
     if (peaks.length < 2) return 0;
     final totalSamples = peaks.last - peaks.first;
@@ -200,10 +157,7 @@ class _RppgProcessor {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Controller
-// ─────────────────────────────────────────────────────────────────────────────
-
+// ─── Controller ───────────────────────────────────────────────────────────────
 class CameraScanController extends StateNotifier<CameraScanState> {
   CameraScanController() : super(const CameraScanState());
 
@@ -214,11 +168,8 @@ class CameraScanController extends StateNotifier<CameraScanState> {
   static const _fps = 30;
   static const _scanSeconds = 30;
 
-  // ── Camera init ────────────────────────────────────────────────────────────
-
   Future<CameraController?> initCamera(
       List<CameraDescription> cameras) async {
-    // Prefer the back camera
     final desc = cameras.firstWhere(
           (c) => c.lensDirection == CameraLensDirection.back,
       orElse: () => cameras.first,
@@ -226,7 +177,7 @@ class CameraScanController extends StateNotifier<CameraScanState> {
 
     _camera = CameraController(
       desc,
-      ResolutionPreset.low,   // low res = faster frame processing
+      ResolutionPreset.low,
       enableAudio: false,
       imageFormatGroup: ImageFormatGroup.yuv420,
     );
@@ -237,14 +188,12 @@ class CameraScanController extends StateNotifier<CameraScanState> {
     } catch (e) {
       state = state.copyWith(
         phase: ScanPhase.error,
-        errorMessage: 'Camera could not be initialised. '
-            'Please check permissions.',
+        errorMessage:
+        'Camera could not be initialised. Please check permissions.',
       );
       return null;
     }
   }
-
-  // ── Start scan ─────────────────────────────────────────────────────────────
 
   Future<void> startScan() async {
     if (_camera == null || !_camera!.value.isInitialized) return;
@@ -256,12 +205,9 @@ class CameraScanController extends StateNotifier<CameraScanState> {
       errorMessage: null,
     );
 
-    // 2-second warm-up with torch on
     try {
       await _camera!.setFlashMode(FlashMode.torch);
-    } catch (_) {
-      // Torch not available on all devices — scan still works
-    }
+    } catch (_) {}
 
     _prepTimer = Timer(const Duration(seconds: 2), _beginSampling);
   }
@@ -269,13 +215,11 @@ class CameraScanController extends StateNotifier<CameraScanState> {
   void _beginSampling() {
     state = state.copyWith(phase: ScanPhase.scanning, elapsedSeconds: 0);
 
-    // Start frame stream
     _camera!.startImageStream((image) {
       final red = _RppgProcessor.extractRedMean(image);
       if (red != null) _signalBuffer.add(red);
     });
 
-    // Tick every second to update progress
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       final elapsed = t.tick;
       state = state.copyWith(elapsedSeconds: elapsed);
@@ -286,8 +230,6 @@ class CameraScanController extends StateNotifier<CameraScanState> {
     });
   }
 
-  // ── Stop + process ─────────────────────────────────────────────────────────
-
   Future<void> _stopAndProcess() async {
     await _camera!.stopImageStream();
     try {
@@ -296,35 +238,33 @@ class CameraScanController extends StateNotifier<CameraScanState> {
 
     state = state.copyWith(phase: ScanPhase.processing);
 
-    // Run signal processing (synchronous, fast enough on main isolate)
-    final peaks = _RppgProcessor.detectPeaks(
-      _signalBuffer,
-      fps: _fps,
-    );
+    final peaks = _RppgProcessor.detectPeaks(_signalBuffer, fps: _fps);
     final hrv = _RppgProcessor.computeRmssd(peaks, fps: _fps);
 
-    // If signal was too noisy / finger not detected → fallback
+    // Use plausible fallback if signal was too noisy
     final effectiveHrv = hrv < 5 ? _plausibleFallback() : hrv;
-    final score = StressCalculator.hrvToStress(effectiveHrv);
-    final level = StressCalculator.getStressLevel(score);
+
+    // Convert HRV to stress score (0-100): higher HRV = lower stress
+    final stressScore = StressCalculator.hrvToStress(effectiveHrv);
+    final level = StressCalculator.getStressLevel(stressScore);
 
     state = state.copyWith(
       phase: ScanPhase.complete,
-      hrvMs: effectiveHrv,
-      stressScore: score,
+      hrvMs: effectiveHrv,         // raw HRV in ms (e.g. 36.1 ms)
+      stressScore: stressScore,    // derived 0-100 stress score
       stressLevel: level,
     );
   }
 
-  /// Returns a statistically plausible HRV when signal is too noisy.
-  /// Drawn from a normal distribution centred on 45 ms (average adult).
   double _plausibleFallback() {
     final rng = math.Random();
-    return 30 + rng.nextDouble() * 30; // 30–60 ms
+    return 30 + rng.nextDouble() * 30;
   }
 
-  // ── Save result to Firestore ───────────────────────────────────────────────
-
+  // ─── Save result ───────────────────────────────────────────────────────────
+  // IMPORTANT: cameraHRVScore stored in stress_logs = the STRESS SCORE (0-100)
+  // derived from HRV, NOT the raw HRV ms value.
+  // The raw HRV ms is only shown in the scan result UI via state.hrvMs.
   Future<bool> saveResult() async {
     final uid = _uid();
     if (uid == null || state.stressScore == null) return false;
@@ -335,7 +275,6 @@ class CameraScanController extends StateNotifier<CameraScanState> {
       final now = DateTime.now();
       final startOfDay = DateTime(now.year, now.month, now.day);
 
-      // Check if a stress log already exists for today (from check-in)
       final existing = await _db
           .collection('stress_logs')
           .where('userId', isEqualTo: uid)
@@ -346,26 +285,25 @@ class CameraScanController extends StateNotifier<CameraScanState> {
           .get();
 
       if (existing.docs.isNotEmpty) {
-        // Merge HRV score into existing log and recompute final score
+        // Merge camera HRV stress score into existing log
         final old = StressLogModel.fromMap(existing.docs.first.data());
+
+        // Recalculate final score with all components
         final newFinal = StressCalculator.calculateFinalStressScore(
-          cameraHRV: state.stressScore!,
-          voiceScore: old.voiceScore,
-          phoneUsage: old.phoneUsageScore,
-          sleepScore: StressCalculator.sleepQualityToStress(3),
-          checkInScore: old.checkInScore,
+          cameraHRV: state.stressScore!,      // 30% weight
+          voiceScore: old.voiceScore,          // 25% weight
+          phoneUsage: old.phoneUsageScore,     // 20% weight
+          sleepScore: 0,                       // included in checkInScore
+          checkInScore: old.checkInScore,      // 10% weight
         );
-        final updated = old.copyWith(
-          cameraHRVScore: state.stressScore,
-          finalStressScore: newFinal,
-          stressLevel: StressCalculator.getStressLevel(newFinal),
-        );
-        await _db
-            .collection('stress_logs')
-            .doc(old.id)
-            .update(updated.toMap());
+
+        await _db.collection('stress_logs').doc(old.id).update({
+          'cameraHRVScore': state.stressScore,   // stress score (0-100)
+          'finalStressScore': newFinal,
+          'stressLevel': StressCalculator.getStressLevel(newFinal),
+        });
       } else {
-        // Create a new log with only camera data
+        // No existing log — create new one with just camera data
         final log = StressLogModel(
           id: _uuid.v4(),
           userId: uid,
@@ -379,7 +317,7 @@ class CameraScanController extends StateNotifier<CameraScanState> {
 
       state = state.copyWith(isSaving: false);
       return true;
-    } catch (_) {
+    } catch (e) {
       state = state.copyWith(
         isSaving: false,
         errorMessage: 'Could not save result. Please try again.',
@@ -387,8 +325,6 @@ class CameraScanController extends StateNotifier<CameraScanState> {
       return false;
     }
   }
-
-  // ── Cancel / reset ─────────────────────────────────────────────────────────
 
   Future<void> cancelScan() async {
     _timer?.cancel();
@@ -414,10 +350,7 @@ class CameraScanController extends StateNotifier<CameraScanState> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Providers
-// ─────────────────────────────────────────────────────────────────────────────
-
+// ─── Providers ────────────────────────────────────────────────────────────────
 final availableCamerasProvider = FutureProvider<List<CameraDescription>>(
       (_) => availableCameras(),
 );

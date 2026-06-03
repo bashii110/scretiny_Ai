@@ -16,7 +16,6 @@ import '../screens/morning_checkin_screen.dart';
 import '../screens/on_boarding_screen.dart';
 import '../screens/register_screen.dart';
 
-// Route name constants
 class AppRoutes {
   static const splash = '/';
   static const onboarding = '/onboarding';
@@ -36,6 +35,7 @@ class AppRoutes {
   static const eveningCheckin = '/evening-checkin';
   static const therapists = '/therapists';
   static const therapistDetail = '/therapists/:id';
+  static const notifications = '/notifications';
 }
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -103,7 +103,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const VoiceCheckinScreen(),
       ),
       GoRoute(
-        path: AppRoutes.voiceCheckin,
+        path: AppRoutes.stressResult,
         builder: (context, state) => const StressResultScreen(),
       ),
       GoRoute(
@@ -115,10 +115,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const MindfulnessScreen(),
       ),
       GoRoute(
-        path: AppRoutes.mindfulness,
+        path: AppRoutes.therapists,
         builder: (context, state) => const TherapistScreen(),
       ),
-      // Add remaining routes as screens are built
+      GoRoute(
+        path: AppRoutes.notifications,
+        builder: (context, state) => const NotificationScreen(),
+      ),
     ],
   );
 });
